@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import { FiSun, FiMoon, FiGithub, FiHome, FiPlusCircle, FiFolder } from 'react-icons/fi';
 
 interface HeaderProps {

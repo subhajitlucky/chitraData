@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { GraphData } from '../types';
 import { motion } from 'framer-motion';
 import { 
   FiDownload, 
   FiTrash2, 
   FiBarChart2,
-  FiArrowLeft
+  FiArrowLeft,
+  FiTrendingUp,
+  FiPieChart,
+  FiActivity
 } from 'react-icons/fi';
 
 interface GraphGalleryProps {
@@ -12,23 +16,6 @@ interface GraphGalleryProps {
 }
 
 const GraphGallery = ({ setActiveTab }: GraphGalleryProps) => {
-  interface Dataset {
-    label: string;
-    data: number[];
-    backgroundColor?: string | string[];
-    borderColor?: string | string[];
-    borderWidth?: number;
-  }
-
-  interface GraphData {
-    id: string;
-    title: string;
-    type: 'bar' | 'line' | 'pie' | 'area' | 'scatter';
-    labels: string[];
-    datasets: Dataset[];
-    createdAt: Date;
-  }
-
   interface DeleteStatus {
     type: 'success' | 'error' | 'info';
     message: string;
@@ -51,25 +38,25 @@ const GraphGallery = ({ setActiveTab }: GraphGalleryProps) => {
     }
   }, []);
 
-  const deleteGraph = (id) => {
+  const deleteGraph = (id: string) => {
     try {
       const updatedGraphs = savedGraphs.filter(graph => graph.id !== id);
       setSavedGraphs(updatedGraphs);
       localStorage.setItem('chitradata_graphs', JSON.stringify(updatedGraphs));
       setDeleteStatus({ type: 'success', message: 'Graph deleted successfully!' });
-    } catch (error) {
+    } catch {
       setDeleteStatus({ type: 'error', message: 'Failed to delete graph' });
     }
     
     setTimeout(() => setDeleteStatus(null), 3000);
   };
 
-  const downloadGraph = (id) => {
+  const downloadGraph = () => {
     setDeleteStatus({ type: 'info', message: 'Graph download functionality would be implemented here!' });
     setTimeout(() => setDeleteStatus(null), 3000);
   };
 
-  const renderChartPreview = (graph) => {
+  const renderChartPreview = (graph: GraphData) => {
     // Simple preview component that shows chart type and data structure
     return (
       <div className="w-full h-40 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg">
@@ -158,7 +145,7 @@ const GraphGallery = ({ setActiveTab }: GraphGalleryProps) => {
                   </h3>
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => downloadGraph(graph.id)}
+                      onClick={downloadGraph}
                       className="text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 p-1"
                       aria-label="Download graph"
                     >

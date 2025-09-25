@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+import type { ChangeEvent } from 'react';
+import type { GraphData } from '../types';
 import { motion } from 'framer-motion';
 import { 
   FiDownload, 
@@ -43,12 +45,12 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     if (name.startsWith('dataset-')) {
-      const [_, index, field] = name.split('-');
-      const datasetIndex = parseInt(index);
+      const [, index, field] = name.split('-');
+      const datasetIndex = parseInt(index, 10);
       const newDatasets = [...config.datasets];
       
       if (field === 'label') {
@@ -140,21 +142,25 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
   const saveGraph = () => {
     try {
       // Prepare data for saving
-      const graphToSave = {
+      const graphToSave: GraphData = {
         id: Date.now().toString(),
         title: config.title,
         type: config.chartType,
         labels: config.labels,
         datasets: config.datasets.map(ds => ({
           label: ds.label,
-          data: ds.data,
+          data: ds.data
+            .split(',')
+            .map(value => Number(value.trim()))
+            .filter(value => !Number.isNaN(value)),
           color: ds.color
         })),
         createdAt: new Date().toISOString()
       };
       
       // Get existing saved graphs from localStorage
-      const savedGraphs = JSON.parse(localStorage.getItem('chitradata_graphs') || '[]');
+      const savedGraphsRaw = JSON.parse(localStorage.getItem('chitradata_graphs') || '[]');
+      const savedGraphs: GraphData[] = Array.isArray(savedGraphsRaw) ? savedGraphsRaw : [];
       
       // Add the new graph
       savedGraphs.push(graphToSave);
@@ -164,6 +170,7 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
       
       setSaveStatus({ type: 'success', message: 'Graph saved successfully!' });
     } catch (error) {
+      console.error('Failed to save graph configuration', error);
       setSaveStatus({ type: 'error', message: 'Failed to save graph' });
     }
     

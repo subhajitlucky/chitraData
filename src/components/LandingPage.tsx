@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { FiBarChart2, FiPieChart, FiTrendingUp, FiActivity, FiChevronRight } from 'react-icons/fi';
 
