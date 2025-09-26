@@ -66,7 +66,7 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
         >
           <button
             onClick={() => setActiveTab('create')}
-            className="px-8 py-3 bg-blue-600 dark:bg-blue-700 text-white font-medium rounded-lg text-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 flex items-center space-x-2 mx-auto"
+            className="px-8 py-3 bg-blue-600 dark:bg-blue-700 text-white font-medium rounded-lg text-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center space-x-2 mx-auto"
           >
             <span>Create Your First Chart</span>
             <FiChevronRight />
@@ -126,17 +126,17 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
         <p className="text-gray-600 dark:text-gray-300 max-w-xl mx-auto mb-8">
           Get started in seconds. No registration required. Free forever.
         </p>
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-xs sm:max-w-none mx-auto">
           <button
             onClick={() => setActiveTab('create')}
-            className="px-8 py-3 bg-blue-600 dark:bg-blue-700 text-white font-medium rounded-lg text-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2"
+            className="px-8 py-3 bg-blue-600 dark:bg-blue-700 text-white font-medium rounded-lg text-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
             <span>Start Creating</span>
             <FiChevronRight />
           </button>
           <button
             onClick={() => setActiveTab('gallery')}
-            className="px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium rounded-lg text-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            className="px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium rounded-lg text-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors w-full sm:w-auto"
           >
             View Gallery
           </button>

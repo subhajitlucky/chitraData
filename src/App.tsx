@@ -13,7 +13,7 @@ function App() {
     <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
       
-      <main className="container mx-auto px-4 py-8 max-w-7xl flex-grow">
+      <main className="container mx-auto px-4 py-8 max-w-7xl flex-grow w-full">
         {activeTab === 'landing' && (
           <motion.div
             initial={{ opacity: 0 }}

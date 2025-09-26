@@ -1,4 +1,4 @@
-export type GraphType = 'line' | 'bar' | 'pie' | 'area' | 'scatter';
+export type GraphType = 'line' | 'bar' | 'pie' | 'area' | 'doughnut';
 
 export interface GraphDataset {
   label: string;

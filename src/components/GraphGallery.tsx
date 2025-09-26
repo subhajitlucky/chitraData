@@ -65,7 +65,7 @@ const GraphGallery = ({ setActiveTab }: GraphGalleryProps) => {
           {graph.type === 'line' && <FiTrendingUp className="mx-auto text-gray-400 text-3xl mb-2" />}
           {graph.type === 'pie' && <FiPieChart className="mx-auto text-gray-400 text-3xl mb-2" />}
           {graph.type === 'area' && <FiActivity className="mx-auto text-gray-400 text-3xl mb-2" />}
-          {graph.type === 'scatter' && <FiActivity className="mx-auto text-gray-400 text-3xl mb-2" />}
+          {graph.type === 'doughnut' && <FiPieChart className="mx-auto text-gray-400 text-3xl mb-2" />}
           <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
             {graph.type} Chart
           </p>
@@ -76,20 +76,22 @@ const GraphGallery = ({ setActiveTab }: GraphGalleryProps) => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <button 
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-4"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           onClick={() => setActiveTab('landing')}
         >
           <FiArrowLeft />
           <span>Back to Home</span>
         </button>
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">My Graphs</h2>
-        {savedGraphs.length > 0 && (
-          <p className="text-gray-600 dark:text-gray-400">
-            {savedGraphs.length} graph{savedGraphs.length !== 1 ? 's' : ''} saved
-          </p>
-        )}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">My Graphs</h2>
+          {savedGraphs.length > 0 && (
+            <p className="text-gray-600 dark:text-gray-400">
+              {savedGraphs.length} graph{savedGraphs.length !== 1 ? 's' : ''} saved
+            </p>
+          )}
+        </div>
       </div>
 
       {deleteStatus && (

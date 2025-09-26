@@ -1,14 +1,29 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { ChangeEvent } from 'react';
-import type { GraphData } from '../types';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import type { GraphData, GraphType } from '../types';
 import { motion } from 'framer-motion';
 import { 
   FiDownload, 
   FiSave, 
   FiRefreshCw, 
-  FiArrowLeft,
-  FiBarChart2
+  FiArrowLeft
 } from 'react-icons/fi';
+import { ChartPreview } from './ChartPreview';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 interface GraphCreationProps {
   setActiveTab: (tab: 'landing' | 'create' | 'gallery') => void;
@@ -25,7 +40,7 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
     title: string;
     labels: string[];
     datasets: DatasetConfig[];
-    chartType: 'bar' | 'line' | 'pie' | 'area' | 'scatter';
+    chartType: GraphType;
   }
 
   const [config, setConfig] = useState<GraphConfig>({
@@ -44,6 +59,7 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
   }
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus | null>(null);
+  const chartRef = useRef<any>(null);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -110,33 +126,94 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
   };
 
   const renderChartPreview = () => {
-    // Simple preview component that shows chart type and data structure
+    // Create a temporary canvas to draw the chart
+    const chartPreviewData = {
+      id: 'preview',
+      title: config.title,
+      type: config.chartType,
+      labels: config.labels,
+      datasets: config.datasets.map(ds => {
+        const parsedData = ds.data
+          .split(',')
+          .map(value => Number(value.trim()))
+          .filter(value => !Number.isNaN(value));
+          
+        return {
+          label: ds.label,
+          data: parsedData,
+          color: ds.color,
+          backgroundColor: ds.color + '80',
+          borderColor: ds.color,
+          borderWidth: 2
+        };
+      }),
+      createdAt: new Date().toISOString()
+    };
+    
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <div className="text-center">
-          <FiBarChart2 className="mx-auto text-gray-400 text-4xl mb-4" />
-          <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            {config.title}
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
-            {config.chartType.charAt(0).toUpperCase() + config.chartType.slice(1)} Chart Preview
-          </p>
-          <div className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Labels: {config.labels.join(', ')}
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-              Datasets: {config.datasets.length}
-            </p>
-          </div>
-        </div>
+      <div className="w-full h-full">
+        <ChartPreview data={chartPreviewData} ref={chartRef} />
       </div>
     );
   };
 
   const downloadGraph = () => {
-    setSaveStatus({ type: 'success', message: 'Graph download functionality would be implemented here!' });
-    setTimeout(() => setSaveStatus(null), 3000);
+    if (!chartRef.current) {
+      setSaveStatus({ type: 'error', message: 'Chart not found for download' });
+      setTimeout(() => setSaveStatus(null), 3000);
+      return;
+    }
+
+    try {
+      // Get the chart instance from the ref
+      const chartInstance = chartRef.current;
+      if (!chartInstance) {
+        setSaveStatus({ type: 'error', message: 'Chart instance not found' });
+        setTimeout(() => setSaveStatus(null), 3000);
+        return;
+      }
+
+      // Get the canvas element from the chart instance
+      const canvas = chartInstance.canvas;
+      if (!canvas) {
+        setSaveStatus({ type: 'error', message: 'Chart canvas not found' });
+        setTimeout(() => setSaveStatus(null), 3000);
+        return;
+      }
+
+      // Create a temporary canvas to add white background
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx) {
+        setSaveStatus({ type: 'error', message: 'Failed to create temporary canvas' });
+        setTimeout(() => setSaveStatus(null), 3000);
+        return;
+      }
+
+      // Set dimensions to match the chart canvas
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+
+      // Fill with white background
+      tempCtx.fillStyle = 'white';
+      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+      // Draw the chart on top
+      tempCtx.drawImage(canvas, 0, 0);
+
+      // Create download link
+      const link = document.createElement('a');
+      link.download = `${config.title.replace(/\s+/g, '_')}_chart.png`;
+      link.href = tempCanvas.toDataURL('image/png');
+      link.click();
+
+      setSaveStatus({ type: 'success', message: 'Chart downloaded successfully!' });
+      setTimeout(() => setSaveStatus(null), 3000);
+    } catch (error) {
+      console.error('Error downloading chart:', error);
+      setSaveStatus({ type: 'error', message: 'Failed to download chart' });
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
   };
 
   const saveGraph = () => {
@@ -153,7 +230,10 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
             .split(',')
             .map(value => Number(value.trim()))
             .filter(value => !Number.isNaN(value)),
-          color: ds.color
+          color: ds.color,
+          backgroundColor: ds.color + '80', // Add transparency for better visual
+          borderColor: ds.color,
+          borderWidth: 2
         })),
         createdAt: new Date().toISOString()
       };
@@ -216,7 +296,7 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
               <option value="line">Line Chart</option>
               <option value="pie">Pie Chart</option>
               <option value="area">Area Chart</option>
-              <option value="scatter">Scatter Plot</option>
+              <option value="doughnut">Doughnut Chart</option>
             </select>
           </div>
 
@@ -335,24 +415,24 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 pt-4">
+          <div className="flex flex-col sm:flex-wrap sm:flex-row gap-3 pt-4">
             <button
               onClick={() => setActiveTab('landing')}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              className="flex items-center justify-center space-x-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               <FiArrowLeft />
               <span>Back</span>
             </button>
             <button
               onClick={downloadGraph}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <FiDownload />
               <span>Download</span>
             </button>
             <button
               onClick={saveGraph}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <FiSave />
               <span>Save</span>
@@ -367,7 +447,7 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
                 ],
                 chartType: 'bar',
               })}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              className="flex items-center justify-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
               <FiRefreshCw />
               <span>Reset</span>
@@ -391,8 +471,8 @@ const GraphCreation = ({ setActiveTab }: GraphCreationProps) => {
       >
         <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Preview</h2>
         
-        <div className="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-          <div className="w-full h-full max-h-[500px]">
+        <div className="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 rounded-lg min-h-[400px]">
+          <div className="w-full h-full max-h-[500px] min-h-[300px]">
             {renderChartPreview()}
           </div>
         </div>
