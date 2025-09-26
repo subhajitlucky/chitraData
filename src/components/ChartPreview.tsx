@@ -1,14 +1,12 @@
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
 import type { GraphData } from '../types';
 import { forwardRef } from 'react';
 
 interface ChartPreviewProps {
   data: GraphData;
-  id?: string; // Add an optional id prop to identify the chart
 }
 
-export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data, id }, ref) => {
+export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) => {
   // Validate data
   if (!data || !data.labels || !data.datasets || data.datasets.length === 0) {
     return (
