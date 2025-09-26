@@ -104,7 +104,7 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
           </button>
           
           <a
-            href="https://github.com"
+            href="https://github.com/subhajitlucky/chitraData"
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors hidden md:block"

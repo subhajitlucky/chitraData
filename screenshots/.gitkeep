@@ -1,0 +1,12 @@
+# Screenshots Directory
+
+This directory contains screenshots for the README.md file.
+
+To add screenshots:
+1. Take screenshots of your application
+2. Save them as:
+   - `landing.png` - Landing page screenshot
+   - `create.png` - Chart creation interface
+   - `gallery.png` - Gallery view screenshot
+
+Recommended screenshot dimensions: 1200x800px or similar aspect ratio.
