@@ -122,6 +122,8 @@ const IndiaMapPageClean = () => {
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [mapTitle, setMapTitle] = useState('India Map Visualization');
+  const [dataSource, setDataSource] = useState('');
   const svgRef = useRef<SVGSVGElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
@@ -213,6 +215,9 @@ const IndiaMapPageClean = () => {
       const newMap = {
         id: Date.now().toString(),
         data: mapData,
+        title: mapTitle,
+        source: dataSource,
+        colorScheme: colorScheme,
         createdAt: new Date().toISOString()
       };
       savedMaps.push(newMap);
@@ -354,12 +359,24 @@ const IndiaMapPageClean = () => {
         svg.selectAll('*').remove();
 
         const width = 1000;
-        const height = 1000;
+        const height = 1100; // Increased height to accommodate title and source
 
         svg.attr('viewBox', `0 0 ${width} ${height}`);
 
+        // Add title at the top
+        svg.append('text')
+          .attr('class', 'map-title')
+          .attr('x', width / 2)
+          .attr('y', 40)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', '32px')
+          .attr('font-weight', 'bold')
+          .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
+          .attr('fill', '#1f2937')
+          .text(mapTitle);
+
         const projection = d3.geoMercator()
-          .fitExtent([[20, 20], [width - 20, height - 20]], geoData);
+          .fitExtent([[20, 70], [width - 20, height - 80]], geoData); // Adjusted for title and source space
 
         const path = d3.geoPath().projection(projection);
 
@@ -484,6 +501,18 @@ const IndiaMapPageClean = () => {
 
         paths
 
+        // Add data source footer at the bottom
+        if (dataSource && dataSource.trim()) {
+          svg.append('text')
+            .attr('class', 'map-source')
+            .attr('x', width / 2)
+            .attr('y', height - 20)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px')
+            .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
+            .attr('fill', '#6b7280')
+            .text(`Source: ${dataSource}`);
+        }
 
         setMapLoaded(true);
 
@@ -505,6 +534,30 @@ const IndiaMapPageClean = () => {
     const svg = d3.select(svgRef.current);
     const currentMaxValue = maxValue;
     const currentMapData = mapData;
+
+    // Update title
+    svg.select('.map-title')
+      .text(mapTitle);
+
+    // Update or create source
+    const existingSource = svg.select('.map-source');
+    if (dataSource && dataSource.trim()) {
+      if (existingSource.empty()) {
+        svg.append('text')
+          .attr('class', 'map-source')
+          .attr('x', 500)
+          .attr('y', 1080)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', '14px')
+          .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
+          .attr('fill', '#6b7280')
+          .text(`Source: ${dataSource}`);
+      } else {
+        existingSource.text(`Source: ${dataSource}`);
+      }
+    } else {
+      existingSource.remove();
+    }
 
     // Update state colors
     svg.selectAll<SVGPathElement, any>('.state')
@@ -582,7 +635,7 @@ const IndiaMapPageClean = () => {
         const stateData = currentMapData.find(s => s.state === stateName);
         return stateData && stateData.value > 0 ? stateData.value.toLocaleString() : '';
       });
-  }, [mapData, maxValue, mapLoaded, colorScheme]);
+  }, [mapData, maxValue, mapLoaded, colorScheme, mapTitle, dataSource]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -669,7 +722,46 @@ const IndiaMapPageClean = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar */}
           <div className="lg:col-span-4 space-y-4">
-            {/* Map Title */}
+            {/* Map Title & Source */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Map Information</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Map Title
+                  </label>
+                  <input
+                    type="text"
+                    value={mapTitle}
+                    onChange={(e) => setMapTitle(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 dark:text-white"
+                    placeholder="e.g., GDP by State 2024"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    This will appear at the top of your map
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Data Source
+                  </label>
+                  <input
+                    type="text"
+                    value={dataSource}
+                    onChange={(e) => setDataSource(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 dark:text-white"
+                    placeholder="e.g., World Bank, 2024 or https://data.gov.in"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Add source citation (text or link) - appears at bottom
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Map Overview */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">India Map</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
