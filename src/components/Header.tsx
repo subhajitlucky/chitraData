@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { FiSun, FiMoon, FiGithub, FiMenu, FiX } from 'react-icons/fi';
 
 interface HeaderProps {
-  activeTab: 'landing' | 'create' | 'gallery';
-  setActiveTab: (tab: 'landing' | 'create' | 'gallery') => void;
+  activeTab: 'landing' | 'create' | 'gallery' | 'map';
+  setActiveTab: (tab: 'landing' | 'create' | 'gallery' | 'map') => void;
 }
 
 const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
@@ -39,7 +39,7 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
   };
 
   return (
-    <header className="bg-white dark:bg-gray-800 shadow-sm py-4">
+    <header className="bg-white dark:bg-gray-800 shadow-sm py-4 fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto px-4 max-w-7xl flex justify-between items-center">
         <div 
           className="flex items-center space-x-2 cursor-pointer"
@@ -71,19 +71,25 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
           
           {/* Desktop navigation - hidden on mobile */}
           <nav className="hidden md:flex space-x-6">
-            <button 
+            <button
               className={`${activeTab === 'landing' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'} transition-colors`}
               onClick={() => setActiveTab('landing')}
             >
               Home
             </button>
-            <button 
+            <button
               className={`${activeTab === 'create' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'} transition-colors`}
               onClick={() => setActiveTab('create')}
             >
               Create
             </button>
-            <button 
+            <button
+              className={`${activeTab === 'map' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'} transition-colors`}
+              onClick={() => setActiveTab('map')}
+            >
+              India Map
+            </button>
+            <button
               className={`${activeTab === 'gallery' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'} transition-colors`}
               onClick={() => setActiveTab('gallery')}
             >
@@ -120,7 +126,7 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
         <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <div className="container mx-auto px-4 py-4">
             <nav className="flex flex-col space-y-3">
-              <button 
+              <button
                 className={`text-left px-3 py-2 rounded-lg ${activeTab === 'landing' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'} transition-colors`}
                 onClick={() => {
                   setActiveTab('landing');
@@ -129,7 +135,7 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
               >
                 Home
               </button>
-              <button 
+              <button
                 className={`text-left px-3 py-2 rounded-lg ${activeTab === 'create' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'} transition-colors`}
                 onClick={() => {
                   setActiveTab('create');
@@ -138,7 +144,16 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
               >
                 Create
               </button>
-              <button 
+              <button
+                className={`text-left px-3 py-2 rounded-lg ${activeTab === 'map' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'} transition-colors`}
+                onClick={() => {
+                  setActiveTab('map');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                India Map
+              </button>
+              <button
                 className={`text-left px-3 py-2 rounded-lg ${activeTab === 'gallery' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'} transition-colors`}
                 onClick={() => {
                   setActiveTab('gallery');

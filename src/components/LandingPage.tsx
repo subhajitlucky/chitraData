@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { FiBarChart2, FiPieChart, FiTrendingUp, FiActivity, FiChevronRight } from 'react-icons/fi';
+import { FiBarChart2, FiPieChart, FiTrendingUp, FiActivity, FiChevronRight, FiMap } from 'react-icons/fi';
 
 interface LandingPageProps {
-  setActiveTab: (tab: 'landing' | 'create' | 'gallery') => void;
+  setActiveTab: (tab: 'landing' | 'create' | 'gallery' | 'map') => void;
 }
 
 const LandingPage = ({ setActiveTab }: LandingPageProps) => {
@@ -28,9 +28,9 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
       description: 'Display data with filled areas for better visual impact'
     },
     {
-      icon: FiActivity,
-      title: 'Scatter Plots',
-      description: 'Analyze relationships between variables'
+      icon: FiMap,
+      title: 'India Map',
+      description: 'Visualize state-wise data on accurate geographical map of India'
     }
   ];
 
@@ -116,7 +116,7 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
       </motion.section>
 
       {/* CTA Section */}
-      <motion.section 
+      <motion.section
         className="py-16 text-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -131,8 +131,15 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
             onClick={() => setActiveTab('create')}
             className="px-8 py-3 bg-blue-600 dark:bg-blue-700 text-white font-medium rounded-lg text-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
-            <span>Start Creating</span>
+            <span>Create Chart</span>
             <FiChevronRight />
+          </button>
+          <button
+            onClick={() => setActiveTab('map')}
+            className="px-8 py-3 bg-green-600 dark:bg-green-700 text-white font-medium rounded-lg text-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
+          >
+            <FiMap className="text-xl" />
+            <span>India Map</span>
           </button>
           <button
             onClick={() => setActiveTab('gallery')}
