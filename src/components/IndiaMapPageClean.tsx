@@ -363,13 +363,13 @@ const IndiaMapPageClean = () => {
 
         svg.attr('viewBox', `0 0 ${width} ${height}`);
 
-        // Add title at the top
+        // Add title at the top-right
         svg.append('text')
           .attr('class', 'map-title')
-          .attr('x', width / 2)
-          .attr('y', 40)
-          .attr('text-anchor', 'middle')
-          .attr('font-size', '32px')
+          .attr('x', width - 150)
+          .attr('y', 90)
+          .attr('text-anchor', 'end')
+          .attr('font-size', '28px')
           .attr('font-weight', 'bold')
           .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
           .attr('fill', '#1f2937')
