@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { FiSun, FiMoon, FiGithub, FiMenu, FiX } from 'react-icons/fi';
 
-interface HeaderProps {
+interface NavbarProps {
   activeTab: 'landing' | 'create' | 'gallery' | 'map';
   setActiveTab: (tab: 'landing' | 'create' | 'gallery' | 'map') => void;
 }
 
-const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
+const Navbar = ({ activeTab, setActiveTab }: NavbarProps) => {
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -45,9 +45,6 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
           className="flex items-center space-x-2 cursor-pointer"
           onClick={() => setActiveTab('landing')}
         >
-          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-bold text-xl">CD</span>
-          </div>
           <h1 className="text-2xl font-bold text-blue-600">
             ChitraData
           </h1>
@@ -181,7 +178,7 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
               </button>
               
               <a
-                href="https://github.com"
+                href="https://github.com/subhajitlucky/chitraData"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 text-center py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
@@ -198,4 +195,4 @@ const Header = ({ activeTab, setActiveTab }: HeaderProps) => {
   );
 };
 
-export default Header;
+export default Navbar;
