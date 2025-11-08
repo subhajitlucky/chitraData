@@ -84,7 +84,7 @@ const GraphGallery = () => {
   };
 
   return (
-    <div>
+    <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <button
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
