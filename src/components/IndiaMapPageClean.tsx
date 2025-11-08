@@ -109,6 +109,82 @@ const STATE_INFO: Record<string, { capital: string; region: string }> = {
   'Puducherry': { capital: 'Puducherry', region: 'South' }
 };
 
+type StateLabelConfig = {
+  x: number;
+  y: number;
+  anchor?: 'start' | 'middle' | 'end';
+  fontSize?: number;
+  connectorOffset?: { x: number; y: number } | null;
+};
+
+const STATE_LABEL_OFFSETS: Record<string, StateLabelConfig> = {
+  'Delhi': { x: 20, y: -10, anchor: 'start', fontSize: 12 },
+  'Chandigarh': { x: 0, y: -6, anchor: 'start', fontSize: 12 },
+  'Goa': { x: -52, y: 8, anchor: 'end', fontSize: 12 },
+  'Sikkim': { x: 40, y: -10, anchor: 'middle', fontSize: 12, connectorOffset: {x: 10, y:0} },
+  'Tripura': { x: -40, y: 40, anchor: 'start', fontSize: 11 },
+  'Manipur': { x: 10, y: 52, anchor: 'start', fontSize: 11 },
+  'Mizoram': { x: 10, y: 70, anchor: 'start', fontSize: 11 },
+  'Nagaland': { x: 60, y: 0, anchor: 'middle', fontSize: 12, connectorOffset: {x: 30, y:0} },
+  'Meghalaya': { x: -30, y: 30, anchor: 'start', fontSize: 11 },
+  'Assam': { x: 1, y: -1, anchor: 'start', fontSize: 12 },
+  'Puducherry': { x: 60, y: 24, anchor: 'start', fontSize: 12, connectorOffset: {x: 40, y:0} },
+  'Dadra and Nagar Haveli and Daman and Diu': { x: -74, y: 0, anchor: 'end', fontSize: 12, connectorOffset: {x: -180, y:0} },
+  'Lakshadweep': { x: -30, y: 38, anchor: 'end', fontSize: 12, connectorOffset: {x: -40, y:0} },
+  'Andaman & Nicobar': { x: 10, y: 0, anchor: 'start', fontSize: 12, connectorOffset: {x: 40, y:0} },
+  'Jharkhand': { x: -25, y: 0, anchor: 'start', fontSize: 12 },
+  'West Bengal': { x: -10, y: 20, anchor: 'start', fontSize: 12 },
+  'Kerala': { x: -50, y: 20, anchor: 'start', fontSize: 12, connectorOffset: {x: 5, y:0} },
+  'Arunachal Pradesh': { x: -25, y: -65, anchor: 'middle', fontSize: 12 }
+};
+
+interface LabelMeta {
+  stateName: string;
+  labelPosition: { x: number; y: number };
+  centroid: [number, number];
+  anchor: 'start' | 'middle' | 'end';
+  fontSize: number;
+  labelHalfWidth: number;
+  labelHalfHeight: number;
+  connectorOffset: { x: number; y: number };
+  hasConnector: boolean;
+}
+
+const getFeatureStateName = (feature: any): string => {
+  const geoName = feature?.properties?.ST_NM || feature?.properties?.NAME_1 || feature?.properties?.name || '';
+  return NAME_MAPPING[geoName] || geoName;
+};
+
+const getLabelFontSize = (stateName: string): number => {
+  const config = STATE_LABEL_OFFSETS[stateName];
+  if (config?.fontSize) return config.fontSize;
+  if (stateName.length > 16) return 11;
+  if (stateName.length > 14) return 12;
+  if (stateName.length > 12) return 13;
+  return 14;
+};
+
+const computeAutoConnectorOffset = (
+  labelX: number,
+  labelY: number,
+  centroid: [number, number],
+  labelHalfWidth: number,
+  labelHalfHeight: number
+) => {
+  const dx = centroid[0] - labelX;
+  const dy = centroid[1] - labelY;
+  const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+  const normX = dx / distance;
+  const normY = dy / distance;
+
+  return {
+    x: normX * labelHalfWidth,
+    y: normY * labelHalfHeight
+  };
+};
+
+const getValueLineOffset = (meta: LabelMeta) => Math.max(meta.fontSize * 0.9, 10);
+
 const IndiaMapPageClean = () => {
   const [mapData, setMapData] = useState<StateData[]>(
     INDIAN_STATES.map(state => ({
@@ -126,6 +202,7 @@ const IndiaMapPageClean = () => {
   const [dataSource, setDataSource] = useState('');
   const svgRef = useRef<SVGSVGElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const labelMetaRef = useRef<LabelMeta[]>([]);
 
   const handleValueChange = (stateName: string, value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -382,6 +459,59 @@ const IndiaMapPageClean = () => {
 
         const g = svg.append('g');
 
+        const labelMetadata: LabelMeta[] = geoData.features.map((feature: any) => {
+          const stateName = getFeatureStateName(feature);
+          const centroidRaw = path.centroid(feature as any) as [number, number];
+          const centroid: [number, number] =
+            centroidRaw && Number.isFinite(centroidRaw[0]) && Number.isFinite(centroidRaw[1])
+              ? centroidRaw
+              : [0, 0];
+          const config = STATE_LABEL_OFFSETS[stateName];
+          const labelX = centroid[0] + (config?.x ?? 0);
+          const labelY = centroid[1] + (config?.y ?? 0);
+          const fontSize = config?.fontSize ?? getLabelFontSize(stateName);
+          const labelHalfWidth = (stateName.length * fontSize * 0.6) / 2;
+          const labelHalfHeight = fontSize / 2;
+          const autoConnectorOffset = computeAutoConnectorOffset(
+            labelX,
+            labelY,
+            centroid,
+            labelHalfWidth,
+            labelHalfHeight
+          );
+
+          let hasConnector = false;
+          let connectorOffset = { x: 0, y: 0 };
+
+          if (config) {
+            if (config.connectorOffset === null) {
+              hasConnector = false;
+            } else {
+              hasConnector = true;
+              const manual = config.connectorOffset;
+              connectorOffset = manual
+                ? {
+                    x: autoConnectorOffset.x + manual.x,
+                    y: autoConnectorOffset.y + manual.y
+                  }
+                : autoConnectorOffset;
+            }
+          }
+
+          return {
+            stateName,
+            centroid,
+            labelPosition: { x: labelX, y: labelY },
+            anchor: config?.anchor ?? 'middle',
+            fontSize,
+            labelHalfWidth,
+            labelHalfHeight,
+            connectorOffset,
+            hasConnector
+          };
+        });
+        labelMetaRef.current = labelMetadata;
+
         const tooltip = d3.select('body')
           .append('div')
           .attr('class', 'map-tooltip')
@@ -400,6 +530,7 @@ const IndiaMapPageClean = () => {
 
         const currentMaxValue = maxValue;
         const currentMapData = mapData;
+        const mapDataLookup = new Map(currentMapData.map(item => [item.state, item.value]));
 
         // Draw state/UT boundaries
         const paths = g.selectAll<SVGPathElement, any>('.state')
@@ -419,28 +550,35 @@ const IndiaMapPageClean = () => {
           .style('cursor', 'pointer')
           .style('transition', 'all 0.3s ease');
 
-        // Add text labels for state values
-        g.selectAll<SVGTextElement, any>('.state-label')
-          .data(geoData.features)
+        // Connectors for compact states
+        g.selectAll<SVGLineElement, LabelMeta>('.state-label-connector')
+          .data(labelMetadata.filter(meta => meta.hasConnector))
           .enter()
-          .append('text')
-          .attr('class', 'state-label')
-          .attr('transform', (d: any) => {
-            const centroid = path.centroid(d as any);
-            return `translate(${centroid[0]}, ${centroid[1]})`;
-          })
-          .attr('text-anchor', 'middle')
+          .append('line')
+          .attr('class', 'state-label-connector')
+          .attr('x1', d => d.labelPosition.x + d.connectorOffset.x)
+          .attr('y1', d => d.labelPosition.y + d.connectorOffset.y)
+          .attr('x2', d => d.centroid[0])
+          .attr('y2', d => d.centroid[1])
+          .style('stroke', '#6b7280')
+          .style('stroke-width', '1.5px')
+          .style('stroke-dasharray', '4,4')
+          .style('pointer-events', 'none');
+
+        // Add grouped labels for state names and values
+        const labelGroups = g.selectAll<SVGGElement, LabelMeta>('.state-label-group')
+          .data(labelMetadata)
+          .enter()
+          .append('g')
+          .attr('class', 'state-label-group')
+          .attr('transform', d => `translate(${d.labelPosition.x}, ${d.labelPosition.y})`);
+
+        labelGroups.append('text')
+          .attr('class', 'state-label-name state-label')
+          .attr('text-anchor', d => d.anchor)
           .attr('dominant-baseline', 'middle')
           .style('pointer-events', 'none')
-          .style('font-size', (d: any) => {
-            const geoName = d.properties?.ST_NM || d.properties?.NAME_1 || d.properties?.name || '';
-            const stateName = NAME_MAPPING[geoName] || geoName;
-            // Smaller font for very small states/UTs
-            if (['Delhi', 'Chandigarh', 'Lakshadweep'].includes(stateName)) {
-              return '14px';
-            }
-            return '18px';
-          })
+          .style('font-size', d => `${d.fontSize}px`)
           .style('font-weight', '700')
           .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
           .style('fill', '#1f2937')
@@ -448,56 +586,27 @@ const IndiaMapPageClean = () => {
           .style('stroke-width', '4px')
           .style('paint-order', 'stroke fill')
           .style('letter-spacing', '0.5px')
-          .text((d: any) => {
-            const geoName = d.properties?.ST_NM || d.properties?.NAME_1 || d.properties?.name || '';
-            const stateName = NAME_MAPPING[geoName] || geoName;
-            const stateData = currentMapData.find(s => s.state === stateName);
-            return stateData && stateData.value > 0 ? stateData.value.toLocaleString() : '';
+          .attr('y', d => -(Math.max(d.fontSize * 0.35, 4)))
+          .text(d => d.stateName);
+
+        labelGroups.append('text')
+          .attr('class', 'state-label-value')
+          .attr('text-anchor', d => d.anchor)
+          .attr('dominant-baseline', 'hanging')
+          .style('pointer-events', 'none')
+          .style('font-size', d => `${Math.max(d.fontSize - 4, 10)}px`)
+          .style('font-weight', '600')
+          .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
+          .style('fill', '#1f2937')
+          .style('stroke', '#ffffff')
+          .style('stroke-width', '3px')
+          .style('paint-order', 'stroke fill')
+          .style('letter-spacing', '0.3px')
+          .attr('y', d => getValueLineOffset(d))
+          .text(d => {
+            const value = mapDataLookup.get(d.stateName) ?? 0;
+            return value.toLocaleString();
           });
-
-        // Add name labels for island territories (Lakshadweep and Andaman & Nicobar)
-        const islandLabels = [
-          { name: 'Lakshadweep', offset: { x: -80, y: 40 } },
-          { name: 'Andaman & Nicobar', offset: { x: 100, y: 0 } }
-        ];
-
-        islandLabels.forEach(island => {
-          const feature = geoData.features.find((f: any) => {
-            const geoName = f.properties?.ST_NM || f.properties?.NAME_1 || f.properties?.name || '';
-            const stateName = NAME_MAPPING[geoName] || geoName;
-            return stateName === island.name;
-          });
-
-          if (feature) {
-            const centroid = path.centroid(feature);
-            g.append('text')
-              .attr('class', 'island-name-label')
-              .attr('x', centroid[0] + island.offset.x)
-              .attr('y', centroid[1] + island.offset.y)
-              .attr('text-anchor', 'middle')
-              .style('pointer-events', 'none')
-              .style('font-size', '16px')
-              .style('font-weight', '700')
-              .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
-              .style('fill', '#374151')
-              .style('stroke', '#ffffff')
-              .style('stroke-width', '3px')
-              .style('paint-order', 'stroke fill')
-              .text(island.name);
-
-            // Add an arrow/line pointing to the island
-            g.append('line')
-              .attr('class', 'island-pointer')
-              .attr('x1', centroid[0] + island.offset.x)
-              .attr('y1', centroid[1] + island.offset.y - 10)
-              .attr('x2', centroid[0])
-              .attr('y2', centroid[1])
-              .style('stroke', '#6b7280')
-              .style('stroke-width', '2px')
-              .style('stroke-dasharray', '4,4')
-              .style('pointer-events', 'none');
-          }
-        });
 
         paths
 
@@ -534,6 +643,7 @@ const IndiaMapPageClean = () => {
     const svg = d3.select(svgRef.current);
     const currentMaxValue = maxValue;
     const currentMapData = mapData;
+    const mapDataLookup = new Map(currentMapData.map(item => [item.state, item.value]));
 
     // Update title
     svg.select('.map-title')
@@ -558,6 +668,9 @@ const IndiaMapPageClean = () => {
     } else {
       existingSource.remove();
     }
+
+    svg.selectAll<SVGGElement, LabelMeta>('.state-label-group')
+      .attr('transform', d => `translate(${d.labelPosition.x}, ${d.labelPosition.y})`);
 
     // Update state colors
     svg.selectAll<SVGPathElement, any>('.state')
@@ -621,20 +734,37 @@ const IndiaMapPageClean = () => {
       });
 
     // Update state value labels
-    svg.selectAll<SVGTextElement, any>('.state-label')
-      .style('font-size', '18px')
+    svg.selectAll<SVGTextElement, LabelMeta>('.state-label')
+      .attr('text-anchor', d => d.anchor)
+      .attr('y', d => -(Math.max(d.fontSize * 0.35, 4)))
+      .style('font-size', d => `${d.fontSize}px`)
       .style('font-weight', '700')
       .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
       .style('stroke', '#ffffff')
       .style('stroke-width', '4px')
       .style('paint-order', 'stroke fill')
       .style('letter-spacing', '0.5px')
-      .text(function(d: any) {
-        const geoName = d.properties?.ST_NM || d.properties?.NAME_1 || d.properties?.name || '';
-        const stateName = NAME_MAPPING[geoName] || geoName;
-        const stateData = currentMapData.find(s => s.state === stateName);
-        return stateData && stateData.value > 0 ? stateData.value.toLocaleString() : '';
+      .text(d => d.stateName);
+
+    svg.selectAll<SVGTextElement, LabelMeta>('.state-label-value')
+      .attr('text-anchor', d => d.anchor)
+      .attr('y', d => getValueLineOffset(d))
+      .style('font-size', d => `${Math.max(d.fontSize - 4, 10)}px`)
+      .style('font-weight', '600')
+      .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
+      .style('stroke', '#ffffff')
+      .style('stroke-width', '3px')
+      .style('paint-order', 'stroke fill')
+      .text(d => {
+        const value = mapDataLookup.get(d.stateName) ?? 0;
+        return value.toLocaleString();
       });
+
+    svg.selectAll<SVGLineElement, LabelMeta>('.state-label-connector')
+      .attr('x1', d => d.labelPosition.x + d.connectorOffset.x)
+      .attr('y1', d => d.labelPosition.y + d.connectorOffset.y)
+      .attr('x2', d => d.centroid[0])
+      .attr('y2', d => d.centroid[1]);
   }, [mapData, maxValue, mapLoaded, colorScheme, mapTitle, dataSource]);
 
   return (
