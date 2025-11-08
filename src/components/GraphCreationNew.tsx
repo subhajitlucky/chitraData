@@ -21,6 +21,8 @@ import { useUndoRedo } from '../hooks/useUndoRedo';
 import { COLOR_PALETTES, type ColorPalette } from '../utils/colorPalettes';
 import { getChartRecommendations } from '../utils/chartRecommendations';
 import { CHART_TEMPLATES } from '../utils/chartTemplates';
+import ExportDialog from './ExportDialog';
+import { exportChartWithQuality } from '../utils/exportUtils';
 
 ChartJS.register(
   CategoryScale,
@@ -73,6 +75,7 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
   const [showTemplates, setShowTemplates] = useState(false);
   const [selectedPalette, setSelectedPalette] = useState<ColorPalette>(COLOR_PALETTES[0]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus | null>(null);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
   const chartRef = useRef<any>(null);
   const { setValue, undo, redo, canUndo, canRedo } = useUndoRedo(config);
@@ -207,15 +210,7 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
               <span>Save</span>
             </button>
             <button
-              onClick={() => {
-                const event = new KeyboardEvent('keydown', {
-                  key: 'e',
-                  code: 'KeyE',
-                  keyCode: 69,
-                  ctrlKey: true
-                });
-                document.dispatchEvent(event);
-              }}
+              onClick={() => setIsExportDialogOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <FiDownload size={18} />
@@ -444,6 +439,39 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
           onClose={() => setShowTemplates(false)}
         />
       )}
+
+      {/* Export Dialog for chart preview */}
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        onExport={async (format, quality, size) => {
+          try {
+            if (!chartRef.current) {
+              throw new Error('Chart preview not available for export');
+            }
+
+            const element =
+              (chartRef.current as any).container ||
+              (chartRef.current as any).canvas ||
+              (chartRef.current as HTMLElement);
+
+            if (!element || !(element instanceof HTMLElement)) {
+              throw new Error('Chart element not found');
+            }
+
+            await exportChartWithQuality(element, format, quality, size, {
+              filename: config.title || 'chart'
+            });
+
+            setSaveStatus({ type: 'success', message: 'Chart exported successfully!' });
+          } catch (error) {
+            console.error('Export failed:', error);
+            setSaveStatus({ type: 'error', message: 'Failed to export chart' });
+          } finally {
+            setTimeout(() => setSaveStatus(null), 3000);
+          }
+        }}
+      />
     </div>
   );
 };

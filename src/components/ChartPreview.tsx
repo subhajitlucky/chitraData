@@ -6,7 +6,7 @@ interface ChartPreviewProps {
   data: GraphData;
 }
 
-export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) => {
+export const ChartPreview = forwardRef<HTMLDivElement, ChartPreviewProps>(({ data }, ref) => {
   // Validate data
   if (!data || !data.labels || !data.datasets || data.datasets.length === 0) {
     return (
@@ -16,15 +16,11 @@ export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) =
           <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
             {data?.title || 'Chart Preview'}
           </h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            No data available to display
-          </p>
+          <p className="text-gray-500 dark:text-gray-400">No data available to display</p>
         </div>
       </div>
     );
   }
-
-  console.log('ChartPreview rendering:', data); // Debug log
 
   // Prepare chart data based on type
   let chartData: any;
@@ -53,8 +49,8 @@ export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) =
         color: '#374151',
         padding: {
           top: 10,
-          bottom: 20
-        }
+          bottom: 20,
+        },
       },
       tooltip: {
         backgroundColor: 'rgba(17, 24, 39, 0.95)',
@@ -69,23 +65,24 @@ export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) =
   };
 
   if (data.type === 'pie' || data.type === 'doughnut') {
-    // For pie/doughnut, use only the first dataset
     const firstDataset = data.datasets[0];
     chartData = {
       labels: data.labels,
-      datasets: [{
-        label: firstDataset.label,
-        data: firstDataset.data,
-        backgroundColor: data.labels.map((_, i) => {
-          const color = data.datasets[i]?.color || '#3b82f6';
-          return color + '80';
-        }),
-        borderColor: data.labels.map((_, i) => {
-          const color = data.datasets[i]?.color || '#3b82f6';
-          return color;
-        }),
-        borderWidth: 2
-      }]
+      datasets: [
+        {
+          label: firstDataset.label,
+          data: firstDataset.data,
+          backgroundColor: data.labels.map((_, i) => {
+            const color = data.datasets[i]?.color || '#3b82f6';
+            return color + '80';
+          }),
+          borderColor: data.labels.map((_, i) => {
+            const color = data.datasets[i]?.color || '#3b82f6';
+            return color;
+          }),
+          borderWidth: 2,
+        },
+      ],
     };
 
     if (data.type === 'doughnut') {
@@ -95,7 +92,6 @@ export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) =
       };
     }
   } else {
-    // For bar, line, area charts
     chartData = {
       labels: data.labels,
       datasets: data.datasets.map((dataset) => ({
@@ -105,15 +101,14 @@ export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) =
         borderColor: dataset.borderColor || dataset.color,
         borderWidth: 2,
         tension: data.type === 'line' || data.type === 'area' ? 0.3 : 0,
-        fill: data.type === 'area' ? true : false,
+        fill: data.type === 'area',
         pointRadius: data.type === 'line' || data.type === 'area' ? 4 : 0,
         pointHoverRadius: data.type === 'line' || data.type === 'area' ? 6 : 0,
         borderRadius: data.type === 'bar' ? 4 : 0,
         borderSkipped: data.type === 'bar' ? false : undefined,
-      }))
+      })),
     };
 
-    // Add scales for non-pie charts
     chartOptions = {
       ...chartOptions,
       scales: {
@@ -125,7 +120,7 @@ export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) =
           ticks: {
             color: '#6b7280',
             maxRotation: 45,
-          }
+          },
         },
         y: {
           grid: {
@@ -134,18 +129,16 @@ export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) =
           },
           ticks: {
             color: '#6b7280',
-          }
-        }
-      }
+          },
+        },
+      },
     };
   }
 
-  // Render appropriate chart based on type
   const renderChart = () => {
     const commonProps = {
       data: chartData,
       options: chartOptions,
-      ref: ref
     };
 
     switch (data.type) {
@@ -165,7 +158,7 @@ export const ChartPreview = forwardRef<any, ChartPreviewProps>(({ data }, ref) =
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center">
+    <div className="w-full h-full flex items-center justify-center" ref={ref}>
       <div className="w-full h-[450px]">
         {renderChart()}
       </div>

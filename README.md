@@ -1,5 +1,3 @@
-an go
-
 # 📊 ChitraData
 
 > **Create beautiful, interactive charts and graphs without any coding. Free, fast, and easy to use.**

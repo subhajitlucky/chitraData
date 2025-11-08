@@ -119,31 +119,54 @@ export const exportChart = async (
 
 export const exportChartWithQuality = async (
   element: HTMLElement,
-  format: 'png' | 'pdf',
+  _format: 'png' | 'pdf',
   quality: 'standard' | 'hd' | '2k' | '4k' | '8k',
-  size: string,
+  _size: string,
   options: Omit<ExportOptions, 'scale' | 'width' | 'height'> = {}
 ): Promise<void> => {
-  const sizes = getPresetSizes();
+  // Define actual target dimensions for each quality level
   const qualityPresets = {
-    standard: { scale: 1 },
-    hd: { scale: 2 },
-    '2k': { scale: 2 },
-    '4k': { scale: 3 },
-    '8k': { scale: 4 }
-  };
+    standard: { width: 1280, height: 720 },    // HD 720p
+    hd: { width: 1920, height: 1080 },         // Full HD 1080p
+    '2k': { width: 2560, height: 1440 },       // 2K QHD
+    '4k': { width: 3840, height: 2160 },       // 4K UHD
+    '8k': { width: 7680, height: 4320 }        // 8K UHD
+  } as const;
 
-  const sizeConfig = sizes[size as keyof typeof sizes] || sizes.presentation;
-  const qualityConfig = qualityPresets[quality];
+  const targetDimensions = qualityPresets[quality];
+  
+  // Calculate scale needed to go from current element size to target size
+  const currentRect = element.getBoundingClientRect();
+  const scaleX = targetDimensions.width / currentRect.width;
+  const scaleY = targetDimensions.height / currentRect.height;
+  
+  // Use the smaller scale to fit proportionally, then round up for sharpness
+  const baseScale = Math.min(scaleX, scaleY);
+  const exportScale = Math.ceil(baseScale);
+  
+  try {
+    // Capture with calculated scale to hit target dimensions
+    const canvas = await html2canvas(element, {
+      scale: exportScale,
+      width: currentRect.width,
+      height: currentRect.height,
+      windowWidth: targetDimensions.width,
+      windowHeight: targetDimensions.height,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+      allowTaint: true
+    });
 
-  const exportOptions: ExportOptions = {
-    ...options,
-    scale: qualityConfig.scale,
-    width: sizeConfig.width,
-    height: sizeConfig.height
-  };
-
-  return exportChart(element, format, exportOptions);
+    // Download
+    const link = document.createElement('a');
+    link.download = `${options.filename || 'chart'}.png`;
+    link.href = canvas.toDataURL('image/png', 0.95);
+    link.click();
+  } catch (error) {
+    console.error('Export failed:', error);
+    throw error;
+  }
 };
 
 export const getPresetSizes = () => {
