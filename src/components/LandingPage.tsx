@@ -1,11 +1,7 @@
 import { motion } from 'framer-motion';
 import { FiBarChart2, FiPieChart, FiTrendingUp, FiActivity, FiChevronRight, FiMap } from 'react-icons/fi';
 
-interface LandingPageProps {
-  setActiveTab: (tab: 'landing' | 'create' | 'gallery' | 'map') => void;
-}
-
-const LandingPage = ({ setActiveTab }: LandingPageProps) => {
+const LandingPage = () => {
   const features = [
     {
       icon: FiBarChart2,
@@ -37,13 +33,13 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
   return (
     <div className="py-12">
       {/* Hero Section */}
-      <motion.section 
+      <motion.section
         className="text-center py-16"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <motion.h1 
+        <motion.h1
           className="text-4xl md:text-6xl font-bold mb-6 text-blue-600 dark:text-blue-400"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -51,7 +47,7 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
         >
           Visualize Your Data
         </motion.h1>
-        <motion.p 
+        <motion.p
           className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -65,7 +61,7 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
           transition={{ delay: 0.6, duration: 0.5 }}
         >
           <button
-            onClick={() => setActiveTab('create')}
+            onClick={() => (window.location.href = '/create')}
             className="px-8 py-3 bg-blue-600 dark:bg-blue-700 text-white font-medium rounded-lg text-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center space-x-2 mx-auto"
           >
             <span>Create Your First Chart</span>
@@ -75,7 +71,7 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
       </motion.section>
 
       {/* Features Grid */}
-      <motion.section 
+      <motion.section
         className="py-16"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -87,8 +83,8 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
             Choose from various chart types to perfectly represent your data
           </p>
         </div>
-        
-        <motion.div 
+
+        <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -128,21 +124,21 @@ const LandingPage = ({ setActiveTab }: LandingPageProps) => {
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-xs sm:max-w-none mx-auto">
           <button
-            onClick={() => setActiveTab('create')}
+            onClick={() => (window.location.href = '/create')}
             className="px-8 py-3 bg-blue-600 dark:bg-blue-700 text-white font-medium rounded-lg text-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
             <span>Create Chart</span>
             <FiChevronRight />
           </button>
           <button
-            onClick={() => setActiveTab('map')}
+            onClick={() => (window.location.href = '/map')}
             className="px-8 py-3 bg-green-600 dark:bg-green-700 text-white font-medium rounded-lg text-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
             <FiMap className="text-xl" />
             <span>India Map</span>
           </button>
           <button
-            onClick={() => setActiveTab('gallery')}
+            onClick={() => (window.location.href = '/gallery')}
             className="px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium rounded-lg text-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors w-full sm:w-auto"
           >
             View Gallery
