@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import type { GraphType } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +23,7 @@ import { getChartRecommendations } from '../utils/chartRecommendations';
 import { CHART_TEMPLATES } from '../utils/chartTemplates';
 import ExportDialog from './ExportDialog';
 import { exportChartWithQuality } from '../utils/exportUtils';
+import { exportChartConfigImage } from '../utils/chartExport';
 
 ChartJS.register(
   CategoryScale,
@@ -79,6 +80,44 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
 
   const chartRef = useRef<any>(null);
   const { setValue, undo, redo, canUndo, canRedo } = useUndoRedo(config);
+  const handleSaveChart = useCallback(() => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('chitradata_graphs') || '[]');
+      const chartToSave = {
+        id: Date.now().toString(),
+        title: config.title || 'Untitled chart',
+        type: config.chartType,
+        labels: config.labels,
+        datasets: config.datasets.map((dataset) => ({
+          label: dataset.label || 'Series',
+          data: dataset.data,
+          color: dataset.color
+        })),
+        createdAt: new Date().toISOString()
+      };
+
+      const updated = Array.isArray(existing) ? [chartToSave, ...existing] : [chartToSave];
+      localStorage.setItem('chitradata_graphs', JSON.stringify(updated));
+      setSaveStatus({ type: 'success', message: 'Chart saved to gallery!' });
+    } catch (error) {
+      console.error('Chart save failed:', error);
+      setSaveStatus({ type: 'error', message: 'Unable to save chart' });
+    } finally {
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+  }, [config]);
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        handleSaveChart();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [handleSaveChart]);
 
   const handleConfigChange = useCallback((newConfig: GraphConfig) => {
     setConfig(newConfig);
@@ -236,15 +275,7 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
                 Duplicate
               </button>
               <button
-                onClick={() => {
-                  const event = new KeyboardEvent('keydown', {
-                    key: 's',
-                    code: 'KeyS',
-                    keyCode: 83,
-                    ctrlKey: true
-                  });
-                  document.dispatchEvent(event);
-                }}
+                onClick={handleSaveChart}
                 className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-green-600/20 transition hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
               >
                 <FiSave className="h-4 w-4" />
@@ -501,22 +532,40 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
         onClose={() => setIsExportDialogOpen(false)}
         onExport={async (format, quality, size) => {
           try {
-            if (!chartRef.current) {
-              throw new Error('Chart preview not available for export');
+            if (format === 'png') {
+              await exportChartConfigImage(
+                {
+                  title: config.title,
+                  labels: config.labels,
+                  datasets: config.datasets.map((dataset) => ({
+                    label: dataset.label || 'Series',
+                    data: dataset.data,
+                    color: dataset.color
+                  })),
+                  chartType: config.chartType
+                },
+                quality,
+                size,
+                config.title || 'chart'
+              );
+            } else {
+              if (!chartRef.current) {
+                throw new Error('Chart preview not available for export');
+              }
+
+              const element =
+                (chartRef.current as any).container ||
+                (chartRef.current as any).canvas ||
+                (chartRef.current as HTMLElement);
+
+              if (!element || !(element instanceof HTMLElement)) {
+                throw new Error('Chart element not found');
+              }
+
+              await exportChartWithQuality(element, format, quality, size, {
+                filename: config.title || 'chart'
+              });
             }
-
-            const element =
-              (chartRef.current as any).container ||
-              (chartRef.current as any).canvas ||
-              (chartRef.current as HTMLElement);
-
-            if (!element || !(element instanceof HTMLElement)) {
-              throw new Error('Chart element not found');
-            }
-
-            await exportChartWithQuality(element, format, quality, size, {
-              filename: config.title || 'chart'
-            });
 
             setSaveStatus({ type: 'success', message: 'Chart exported successfully!' });
           } catch (error) {
