@@ -526,29 +526,33 @@ const LandingPage = () => {
         transition={{ delay: 0.4, duration: 0.6 }}
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl">
-              Built for leaders, open to everyone
-            </h2>
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
-              Whether you guide a board meeting, design a strategy sprint, or explore a passion project, ChitraData keeps the bar high and
-              the barrier low.
-            </p>
-          </div>
+          <div className="grid gap-10 lg:grid-cols-4 lg:items-start">
+            <div className="lg:col-span-1">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl">
+                Built for leaders, open to everyone
+              </h2>
+              <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
+                Whether you guide a board meeting, design a strategy sprint, or explore a passion project, ChitraData keeps the bar high
+                and the barrier low.
+              </p>
+            </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-            {audienceSegments.map((segment) => (
-              <div
-                key={segment.title}
-                className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800/60"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
-                  <segment.icon className="h-6 w-6" />
-                </div>
-                <h3 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">{segment.title}</h3>
-                <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{segment.description}</p>
+            <div className="lg:col-span-3">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                {audienceSegments.map((segment) => (
+                  <div
+                    key={segment.title}
+                    className="h-full rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800/60"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
+                      <segment.icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">{segment.title}</h3>
+                    <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{segment.description}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </motion.section>

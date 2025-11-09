@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import * as d3 from 'd3';
-import { FiDownload, FiSave, FiRotateCcw, FiInfo } from 'react-icons/fi';
+import { FiDownload, FiSave, FiRotateCcw, FiInfo, FiSliders, FiMap } from 'react-icons/fi';
 
 interface StateData {
   state: string;
@@ -768,251 +768,326 @@ const IndiaMapPageClean = () => {
   }, [mapData, maxValue, mapLoaded, colorScheme, mapTitle, dataSource]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Toolbar */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="container mx-auto px-4 py-3 max-w-7xl">
-          <div className="flex items-center justify-end gap-3">
-            <button
-              onClick={generateRandomData}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              Random Data
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <FiSave size={18} />
-              <span>Save</span>
-            </button>
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <FiDownload size={18} />
-              <span>Export</span>
-            </button>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50">
+      {/* Hero */}
+      <div className="border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <span className="inline-flex items-center rounded-full border border-green-200/70 bg-green-50 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-200">
+                Map studio
+              </span>
+              <h1 className="mt-4 text-3xl font-bold leading-tight text-gray-900 dark:text-white sm:text-4xl">
+                Transform regional data into publication-ready maps.
+              </h1>
+              <p className="mt-3 text-base text-gray-600 dark:text-gray-300 sm:text-lg">
+                Colour every state and union territory with precision palettes, auto-aligned labels, and 2K–8K exports optimised for slides, dashboards, and print.
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  onClick={generateRandomData}
+                  className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-600/20 transition hover:bg-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500"
+                >
+                  Random data
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200 dark:hover:border-blue-400"
+                >
+                  <FiRotateCcw className="h-4 w-4" />
+                  Reset map
+                </button>
+                <button
+                  onClick={() => setShowExportDialog(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200 dark:hover:border-blue-400"
+                >
+                  <FiDownload className="h-4 w-4" />
+                  Export settings
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 justify-start lg:justify-end">
+              <button
+                onClick={handleSave}
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-green-600/20 transition hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+              >
+                <FiSave className="h-4 w-4" />
+                Save to browser
+              </button>
+              <button
+                onClick={() => setShowExportDialog(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+              >
+                <FiDownload className="h-4 w-4" />
+                Export map
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-blue-100 p-3 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
+                  <FiSliders className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Palette families built-in</h3>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Sequential, diverging, Viridis, Plasma, Turbo, and grayscale sets tuned for accessibility and print.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-emerald-100 p-3 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  <FiMap className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Label intelligence</h3>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Auto offsets, connector lines, and capital metadata keep compact regions legible at any resolution.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-purple-100 p-3 text-purple-600 dark:bg-purple-500/10 dark:text-purple-300">
+                  <FiDownload className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">2K, 4K and 8K exports</h3>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Produce map PNGs with smoothing optimised for large displays, slide decks, and wide-format print.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Export Dialog */}
       {showExportDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowExportDialog(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-800 dark:text-white">Export Map</h3>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onClick={() => setShowExportDialog(false)}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-800 dark:bg-gray-900/60">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Export map</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Choose the resolution that matches your presentation or print needs.</p>
+              </div>
               <button
                 onClick={() => setShowExportDialog(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="rounded-full p-2 text-gray-500 transition hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <span className="sr-only">Close export dialog</span>
+                ×
               </button>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-              Choose your export resolution. Higher resolutions provide better quality for printing and large displays.
-            </p>
-            <div className="space-y-3">
+            <div className="space-y-3 px-6 py-6">
               <button
                 onClick={() => handleExport('2k')}
-                className="w-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
+                className="w-full rounded-xl bg-blue-600 px-4 py-4 text-left text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
               >
-                <div className="text-left">
-                  <div className="font-bold text-lg">2K Quality</div>
-                  <div className="text-sm opacity-90">2560 × 1440 pixels - Good for web & presentations</div>
-                </div>
+                <div className="text-base font-semibold">2K Quality</div>
+                <div className="text-xs text-blue-100">2560 × 1440 • Ideal for slides and dashboards</div>
               </button>
               <button
                 onClick={() => handleExport('4k')}
-                className="w-full p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+                className="w-full rounded-xl bg-purple-600 px-4 py-4 text-left text-white shadow-lg shadow-purple-600/20 transition hover:bg-purple-700"
               >
-                <div className="text-left">
-                  <div className="font-bold text-lg">4K Quality</div>
-                  <div className="text-sm opacity-90">3840 × 2160 pixels - Great for HD displays & printing</div>
-                </div>
+                <div className="text-base font-semibold">4K Quality</div>
+                <div className="text-xs text-purple-100">3840 × 2160 • Perfect for HD displays and reports</div>
               </button>
               <button
                 onClick={() => handleExport('8k')}
-                className="w-full p-4 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all shadow-md hover:shadow-lg"
+                className="w-full rounded-xl bg-pink-600 px-4 py-4 text-left text-white shadow-lg shadow-pink-600/20 transition hover:bg-pink-700"
               >
-                <div className="text-left">
-                  <div className="font-bold text-lg">8K Quality</div>
-                  <div className="text-sm opacity-90">7680 × 4320 pixels - Best for large format printing</div>
-                </div>
+                <div className="text-base font-semibold">8K Quality</div>
+                <div className="text-xs text-pink-100">7680 × 4320 • Ready for large-format and print</div>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Sidebar */}
-          <div className="lg:col-span-4 space-y-4">
-            {/* Map Title & Source */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Map Information</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Map Title
-                  </label>
-                  <input
-                    type="text"
-                    value={mapTitle}
-                    onChange={(e) => setMapTitle(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 dark:text-white"
-                    placeholder="e.g., GDP by State 2024"
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    This will appear at the top of your map
+      {/* Workspace */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
+        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+          <div className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Map information</h3>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Add the title and source that accompany your export.
                   </p>
+
+                  <div className="mt-5 space-y-4">
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Map title
+                      </label>
+                      <input
+                        type="text"
+                        value={mapTitle}
+                        onChange={(e) => setMapTitle(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/40 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        placeholder="e.g., GDP by State 2024"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Displayed above the map preview and export.</p>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Data source
+                      </label>
+                      <input
+                        type="text"
+                        value={dataSource}
+                        onChange={(e) => setDataSource(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/40 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        placeholder="e.g., World Bank, 2024 or https://data.gov.in"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Appears below the legend for attribution.</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Data Source
-                  </label>
-                  <input
-                    type="text"
-                    value={dataSource}
-                    onChange={(e) => setDataSource(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 dark:text-white"
-                    placeholder="e.g., World Bank, 2024 or https://data.gov.in"
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Add source citation (text or link) - appears at bottom
+                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-blue-100 p-3 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
+                      <FiInfo className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold text-gray-900 dark:text-white">Coverage</h2>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">28 states + 8 union territories (2024)</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                    Input a value for each region to colour the map. Leave blank for zero.
                   </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Colour scheme</h3>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Choose a palette that fits your story. Switch anytime.</p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {/* colour buttons retained */}
+                  <button
+                    onClick={() => setColorScheme('sequential')}
+                    className={`rounded-lg border p-3 text-left transition ${
+                      colorScheme === 'sequential'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded bg-gradient-to-r from-blue-200 to-blue-600" />
+                      <div>
+                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Blue</div>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Sequential</div>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setColorScheme('diverging')}
+                    className={`rounded-lg border p-3 text-left transition ${
+                      colorScheme === 'diverging'
+                        ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/20 ring-2 ring-pink-500'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-pink-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded bg-gradient-to-r from-red-400 via-purple-300 to-blue-500" />
+                      <div>
+                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Diverging</div>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Red ↔ Blue</div>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setColorScheme('viridis')}
+                    className={`rounded-lg border p-3 text-left transition ${
+                      colorScheme === 'viridis'
+                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-green-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded bg-gradient-to-r from-purple-800 via-teal-500 to-yellow-400" />
+                      <div>
+                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Viridis</div>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Scientific</div>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setColorScheme('plasma')}
+                    className={`rounded-lg border p-3 text-left transition ${
+                      colorScheme === 'plasma'
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-500'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-purple-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded bg-gradient-to-r from-purple-900 via-pink-500 to-yellow-300" />
+                      <div>
+                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Plasma</div>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">ML/AI</div>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setColorScheme('turbo')}
+                    className={`rounded-lg border p-3 text-left transition ${
+                      colorScheme === 'turbo'
+                        ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20 ring-2 ring-cyan-500'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-cyan-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded bg-gradient-to-r from-blue-900 via-green-400 via-yellow-300 to-red-500" />
+                      <div>
+                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Turbo</div>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Rainbow</div>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setColorScheme('grayscale')}
+                    className={`rounded-lg border p-3 text-left transition ${
+                      colorScheme === 'grayscale'
+                        ? 'border-gray-500 bg-gray-50 dark:bg-gray-900/20 ring-2 ring-gray-500'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded bg-gradient-to-r from-black to-white" />
+                      <div>
+                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Grayscale</div>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Print</div>
+                      </div>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Map Overview */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Map</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Create a color-coded map of India with custom data values for each state and union territory
-              </p>
-
-              <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <FiInfo size={16} className="text-blue-600" />
-                <span className="text-xs text-blue-700 dark:text-blue-300">
-                  28 States + 8 Union Territories (2024)
-                </span>
-              </div>
-            </div>
-
-            {/* Color Scheme */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Color Scheme</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setColorScheme('sequential')}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    colorScheme === 'sequential'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded bg-gradient-to-r from-blue-200 to-blue-600"></div>
-                    <div>
-                      <div className="font-semibold text-gray-800 dark:text-white text-xs">Blue</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Classic</div>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setColorScheme('diverging')}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    colorScheme === 'diverging'
-                      ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/20 ring-2 ring-pink-500'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-pink-400'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded bg-gradient-to-r from-red-400 via-purple-300 to-blue-500"></div>
-                    <div>
-                      <div className="font-semibold text-gray-800 dark:text-white text-xs">Diverging</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Red-Blue</div>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setColorScheme('viridis')}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    colorScheme === 'viridis'
-                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-green-400'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded bg-gradient-to-r from-purple-800 via-teal-500 to-yellow-400"></div>
-                    <div>
-                      <div className="font-semibold text-gray-800 dark:text-white text-xs">Viridis</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Scientific</div>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setColorScheme('plasma')}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    colorScheme === 'plasma'
-                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-500'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-purple-400'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded bg-gradient-to-r from-purple-900 via-pink-500 to-yellow-300"></div>
-                    <div>
-                      <div className="font-semibold text-gray-800 dark:text-white text-xs">Plasma</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">ML/AI</div>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setColorScheme('turbo')}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    colorScheme === 'turbo'
-                      ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20 ring-2 ring-cyan-500'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-cyan-400'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded bg-gradient-to-r from-blue-900 via-green-400 via-yellow-300 to-red-500"></div>
-                    <div>
-                      <div className="font-semibold text-gray-800 dark:text-white text-xs">Turbo</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Rainbow</div>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setColorScheme('grayscale')}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    colorScheme === 'grayscale'
-                      ? 'border-gray-500 bg-gray-50 dark:bg-gray-900/20 ring-2 ring-gray-500'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded bg-gradient-to-r from-black to-white"></div>
-                    <div>
-                      <div className="font-semibold text-gray-800 dark:text-white text-xs">Grayscale</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Print</div>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* State Data Input */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">State Data</h3>
-              <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">State values</h3>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Scroll through the list and update values inline.</p>
+              <div className="mt-4 max-h-96 space-y-2 overflow-y-auto pr-2">
                 {mapData.map((stateData) => {
                   const info = STATE_INFO[stateData.state];
                   const color = generateColor(stateData.value, maxValue);
@@ -1020,17 +1095,15 @@ const IndiaMapPageClean = () => {
                   return (
                     <div
                       key={stateData.state}
-                      className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"
                     >
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="mb-2 flex items-center gap-2">
                         <div
-                          className="w-5 h-5 rounded border"
+                          className="h-5 w-5 rounded border border-white/20"
                           style={{ backgroundColor: color }}
                         />
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {stateData.state}
-                          </div>
+                          <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{stateData.state}</div>
                           {info && (
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                               {info.capital} • {info.region}
@@ -1042,70 +1115,73 @@ const IndiaMapPageClean = () => {
                         type="number"
                         value={stateData.value}
                         onChange={(e) => handleValueChange(stateData.state, e.target.value)}
-                        className="w-full px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 dark:text-white"
+                        className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                         placeholder="Value"
                       />
                     </div>
                   );
                 })}
               </div>
-              <button
-                onClick={handleReset}
-                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                <FiRotateCcw size={16} />
-                Reset All
-              </button>
             </div>
           </div>
+        </section>
 
-          {/* Right Side - Map Preview */}
-          <div className="lg:col-span-8">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Map</h2>
-              <div ref={mapContainerRef} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 min-h-[600px] flex items-center justify-center relative">
-                {!mapLoaded && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-gray-500 dark:text-gray-400">Loading map...</div>
-                  </div>
-                )}
-                <svg
-                  ref={svgRef}
-                  className="w-full max-w-4xl"
-                  xmlns="http://www.w3.org/2000/svg"
-                />
+        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Live preview</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Full SVG render with zoom-friendly detail.</p>
+            </div>
+            <button
+              onClick={() => setShowExportDialog(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-blue-500 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-500/10"
+            >
+              <FiDownload className="h-4 w-4" />
+              Export options
+            </button>
+          </div>
+
+          <div ref={mapContainerRef} className="relative mt-5 flex min-h-[620px] items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-950">
+            {!mapLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                Loading map…
               </div>
+            )}
+            <svg
+              ref={svgRef}
+              className="w-full max-w-4xl"
+              xmlns="http://www.w3.org/2000/svg"
+            />
+          </div>
 
-              {/* Color Scale Legend */}
-              <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
-                <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Color Scale</h5>
-                <div className="space-y-2">
-                  {colorScaleRanges.map((range, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <div
-                        className="w-6 h-6 rounded border border-gray-300 dark:border-gray-600"
-                        style={{ backgroundColor: range.color }}
-                      />
-                      <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                        {range.label}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      <span className="font-medium">Max Value:</span> {maxValue}
-                    </div>
-                  </div>
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
+            <h5 className="text-sm font-semibold text-gray-900 dark:text-white">Colour scale</h5>
+            <div className="mt-3 space-y-2">
+              {colorScaleRanges.map((range, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div
+                    className="h-6 w-6 rounded border border-gray-300 dark:border-gray-600"
+                    style={{ backgroundColor: range.color }}
+                  />
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{range.label}</span>
                 </div>
+              ))}
+              <div className="mt-3 border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                <span className="font-semibold">Max value:</span> {maxValue}
+                {dataSource && (
+                  <span className="ml-2">
+                    • <span className="font-semibold">Source:</span> {dataSource}
+                  </span>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Save Status */}
       {saveStatus && (
-        <div className="fixed bottom-4 right-4 p-4 bg-green-100 text-green-800 dark:bg-green-900/90 dark:text-green-200 rounded-lg shadow-xl">
+        <div className="fixed bottom-4 right-4 rounded-lg bg-green-100 p-4 text-green-800 shadow-xl dark:bg-green-900/90 dark:text-green-200">
           {saveStatus}
         </div>
       )}

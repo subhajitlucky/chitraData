@@ -161,98 +161,153 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
   const recommendations = getChartRecommendations(config.labels, config.datasets);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Quick Actions Toolbar - simple horizontal toolbar, not sticky */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="container mx-auto px-4 py-3 max-w-7xl">
-          <div className="flex items-center justify-end gap-3">
-            <button
-              onClick={undo}
-              disabled={!canUndo}
-              className={`p-2 rounded-lg transition-colors ${
-                canUndo ? 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' : 'text-gray-400 cursor-not-allowed'
-              }`}
-              title="Undo"
-            >
-              <FiRotateCcw size={18} />
-            </button>
-            <button
-              onClick={redo}
-              disabled={!canRedo}
-              className={`p-2 rounded-lg transition-colors ${
-                canRedo ? 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' : 'text-gray-400 cursor-not-allowed'
-              }`}
-              title="Redo"
-            >
-              <FiRotateCcw size={18} className="rotate-180" />
-            </button>
-            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
-            <button
-              onClick={handleDuplicate}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              <FiCopy size={18} />
-              <span>Duplicate</span>
-            </button>
-            <button
-              onClick={() => {
-                const event = new KeyboardEvent('keydown', {
-                  key: 's',
-                  code: 'KeyS',
-                  keyCode: 83,
-                  ctrlKey: true
-                });
-                document.dispatchEvent(event);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <FiSave size={18} />
-              <span>Save</span>
-            </button>
-            <button
-              onClick={() => setIsExportDialogOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <FiDownload size={18} />
-              <span>Export</span>
-            </button>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50">
+      {/* Hero */}
+      <div className="border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <span className="inline-flex items-center rounded-full border border-blue-200/70 bg-blue-50 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                Chart studio
+              </span>
+              <h1 className="mt-4 text-3xl font-bold leading-tight text-gray-900 dark:text-white sm:text-4xl">
+                Design precision charts without leaving your browser.
+              </h1>
+              <p className="mt-3 text-base text-gray-600 dark:text-gray-300 sm:text-lg">
+                Load sample data, apply executive-ready templates, and iterate safely with undo/redo. The live preview keeps pace while you fine-tune palettes, labels, and annotations.
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  onClick={() => setShowSampleData(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:border-blue-400"
+                >
+                  <FiDatabase className="h-4 w-4" />
+                  Sample data library
+                </button>
+                <button
+                  onClick={() => setShowTemplates(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700 transition hover:border-purple-300 hover:bg-purple-100 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-200 dark:hover:border-purple-400"
+                >
+                  <FiLayout className="h-4 w-4" />
+                  Template gallery
+                </button>
+                <button
+                  onClick={() => setIsExportDialogOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200 dark:hover:border-blue-400"
+                >
+                  <FiDownload className="h-4 w-4" />
+                  Export settings
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 justify-start lg:justify-end">
+              <button
+                onClick={undo}
+                disabled={!canUndo}
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                  canUndo
+                    ? 'border-gray-200 text-gray-700 hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200'
+                    : 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500'
+                }`}
+              >
+                <FiRotateCcw className="h-4 w-4" />
+                Undo
+              </button>
+              <button
+                onClick={redo}
+                disabled={!canRedo}
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                  canRedo
+                    ? 'border-gray-200 text-gray-700 hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200'
+                    : 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500'
+                }`}
+              >
+                <FiRotateCcw className="h-4 w-4 rotate-180" />
+                Redo
+              </button>
+              <div className="hidden h-6 w-px bg-gray-200 dark:bg-gray-700 lg:block" aria-hidden />
+              <button
+                onClick={handleDuplicate}
+                className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-600/20 transition hover:bg-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500"
+              >
+                <FiCopy className="h-4 w-4" />
+                Duplicate
+              </button>
+              <button
+                onClick={() => {
+                  const event = new KeyboardEvent('keydown', {
+                    key: 's',
+                    code: 'KeyS',
+                    keyCode: 83,
+                    ctrlKey: true
+                  });
+                  document.dispatchEvent(event);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-green-600/20 transition hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+              >
+                <FiSave className="h-4 w-4" />
+                Save
+              </button>
+              <button
+                onClick={() => setIsExportDialogOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+              >
+                <FiDownload className="h-4 w-4" />
+                Export
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-blue-100 p-3 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
+                  <FiDatabase className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Spreadsheet-friendly data editor</h3>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Paste labels and values, add datasets, and keep colours consistent with palette memory.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-purple-100 p-3 text-purple-600 dark:bg-purple-500/10 dark:text-purple-300">
+                  <FiLayout className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Template-driven storytelling</h3>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Start from executive-ready templates, then switch chart types without losing polish.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-emerald-100 p-3 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  <FiDownload className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">HD to 8K exports</h3>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Pick aspect ratios, export queues, and keep every chart deck-ready in seconds.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Quick Start Bar */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Quick Start:</span>
-            <button
-              onClick={() => setShowSampleData(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium"
-            >
-              <FiDatabase size={16} />
-              Sample Data
-            </button>
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors text-sm font-medium"
-            >
-              <FiLayout size={16} />
-              Templates
-            </button>
-            {recommendations.length > 0 && (
-              <div className="ml-auto">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  💡 AI suggests: {recommendations[0].type.toUpperCase()}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Smart Recommendations */}
+      {/* Workspace */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
         {recommendations.length > 0 && (
-          <div className="mb-6">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 shadow-sm dark:border-blue-500/30 dark:bg-blue-500/10">
             <ChartRecommendationUI
               recommendations={recommendations}
               onSelect={handleChartTypeChange}
@@ -261,146 +316,146 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
           </div>
         )}
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Sidebar - Controls */}
-          <div className="lg:col-span-4 space-y-4">
-            {/* Panel Navigation */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="flex border-b border-gray-200 dark:border-gray-700">
-                {[
-                  { id: 'data', label: 'Data', icon: FiDatabase },
-                  { id: 'style', label: 'Style', icon: FiLayout },
-                  { id: 'settings', label: 'Settings', icon: FiSettings }
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActivePanel(tab.id as any)}
-                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-colors ${
-                        activePanel === tab.id
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-b-2 border-blue-500'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                      }`}
-                    >
-                      <Icon size={16} />
-                      <span className="hidden sm:inline">{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="p-4">
-                <AnimatePresence mode="wait">
-                  {activePanel === 'data' && (
-                    <motion.div
-                      key="data"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="space-y-4"
-                    >
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Chart Title
-                        </label>
-                        <input
-                          type="text"
-                          value={config.title}
-                          onChange={(e) => handleTitleChange(e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 dark:text-white"
-                          placeholder="Enter chart title"
-                        />
-                      </div>
-                      <DataEditor
-                        labels={config.labels}
-                        datasets={config.datasets}
-                        onChange={handleDataChange}
-                      />
-                    </motion.div>
-                  )}
-
-                  {activePanel === 'style' && (
-                    <motion.div
-                      key="style"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="space-y-4"
-                    >
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Chart Type
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {['bar', 'line', 'area', 'pie', 'doughnut'].map((type) => (
-                            <button
-                              key={type}
-                              onClick={() => handleChartTypeChange(type as GraphType)}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                                config.chartType === type
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                              }`}
-                            >
-                              {type.charAt(0).toUpperCase() + type.slice(1)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <ColorPaletteSelector
-                        selectedPalette={selectedPalette}
-                        onSelect={handlePaletteChange}
-                      />
-                    </motion.div>
-                  )}
-
-                  {activePanel === 'settings' && (
-                    <motion.div
-                      key="settings"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="space-y-4"
-                    >
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <FiSettings size={48} className="mx-auto mb-2 opacity-50" />
-                        <p>Advanced settings coming soon</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+        <div className="space-y-8">
+          <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex overflow-hidden rounded-t-2xl border-b border-gray-200 dark:border-gray-800">
+              {[{ id: 'data', label: 'Data', icon: FiDatabase }, { id: 'style', label: 'Style', icon: FiLayout }, { id: 'settings', label: 'Settings', icon: FiSettings }].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActivePanel(tab.id as any)}
+                    className={`flex-1 px-4 py-3 text-sm font-semibold transition ${
+                      activePanel === tab.id
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-          </div>
+            <div className="p-5">
+              <AnimatePresence mode="wait">
+                {activePanel === 'data' && (
+                  <motion.div
+                    key="data"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-5"
+                  >
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Chart title
+                      </label>
+                      <input
+                        type="text"
+                        value={config.title}
+                        onChange={(e) => handleTitleChange(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/40 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        placeholder="Enter chart title"
+                      />
+                    </div>
+                    <DataEditor
+                      labels={config.labels}
+                      datasets={config.datasets}
+                      onChange={handleDataChange}
+                    />
+                  </motion.div>
+                )}
 
-          {/* Right Side - Preview */}
-          <div className="lg:col-span-8">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Preview</h2>
-              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 min-h-[500px]">
-                <ChartPreview
-                  data={{
-                    id: 'preview',
-                    title: config.title,
-                    type: config.chartType,
-                    labels: config.labels,
-                    datasets: config.datasets.map(ds => ({
-                      label: ds.label,
-                      data: ds.data,
-                      color: ds.color,
-                      backgroundColor: ds.color,
-                      borderColor: ds.color,
-                      borderWidth: 2
-                    })),
-                    createdAt: new Date().toISOString()
-                  }}
-                  ref={chartRef}
-                />
-              </div>
+                {activePanel === 'style' && (
+                  <motion.div
+                    key="style"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-5"
+                  >
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Chart type
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+                        {['bar', 'line', 'area', 'pie', 'doughnut'].map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => handleChartTypeChange(type as GraphType)}
+                            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                              config.chartType === type
+                                ? 'bg-blue-600 text-white shadow'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <ColorPaletteSelector
+                      selectedPalette={selectedPalette}
+                      onSelect={handlePaletteChange}
+                    />
+                  </motion.div>
+                )}
+
+                {activePanel === 'settings' && (
+                  <motion.div
+                    key="settings"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4 text-center text-sm text-gray-500 dark:text-gray-400"
+                  >
+                    <FiSettings className="mx-auto h-10 w-10 opacity-60" />
+                    <p>Advanced settings are on the roadmap. Let us know what you need most.</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
+          </section>
+
+          <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Live preview</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Every change is rendered instantly for review.</p>
+              </div>
+              <button
+                onClick={() => setIsExportDialogOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-500 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-500/10"
+              >
+                <FiDownload className="h-4 w-4" />
+                Export options
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+              <ChartPreview
+                data={{
+                  id: 'preview',
+                  title: config.title,
+                  type: config.chartType,
+                  labels: config.labels,
+                  datasets: config.datasets.map((ds) => ({
+                    label: ds.label,
+                    data: ds.data,
+                    color: ds.color,
+                    backgroundColor: ds.color,
+                    borderColor: ds.color,
+                    borderWidth: 2
+                  })),
+                  createdAt: new Date().toISOString()
+                }}
+                ref={chartRef}
+              />
+            </div>
+          </section>
         </div>
       </div>
 
@@ -411,7 +466,7 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl z-50 ${
+            className={`fixed bottom-4 right-4 z-50 rounded-lg p-4 shadow-xl ${
               saveStatus.type === 'success'
                 ? 'bg-green-100 text-green-800 dark:bg-green-900/90 dark:text-green-200'
                 : saveStatus.type === 'error'
