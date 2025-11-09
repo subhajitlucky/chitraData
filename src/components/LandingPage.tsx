@@ -79,38 +79,40 @@ const LandingPage = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.5 }}
       >
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold mb-4">Chart Types</h2>
-          <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-            Choose from various chart types to perfectly represent your data
-          </p>
-        </div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">Chart Types</h2>
+            <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+              Choose from various chart types to perfectly represent your data
+            </p>
+          </div>
 
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-100 dark:border-gray-700"
-              whileHover={{ y: -10 }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 * index }}
-            >
-              <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center mb-4">
-                <feature.icon className="text-blue-600 dark:text-blue-400 text-xl" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                {feature.description}
-              </p>
-            </motion.div>
-          ))}
-        </motion.div>
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            {features.map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-100 dark:border-gray-700"
+                whileHover={{ y: -10 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 * index }}
+              >
+                <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center mb-4">
+                  <feature.icon className="text-blue-600 dark:text-blue-400 text-xl" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
       </motion.section>
 
       {/* CTA Section */}
