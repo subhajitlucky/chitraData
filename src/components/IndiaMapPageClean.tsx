@@ -185,6 +185,9 @@ const computeAutoConnectorOffset = (
 
 const getValueLineOffset = (meta: LabelMeta) => Math.max(meta.fontSize * 0.9, 10);
 
+const MAP_BASE_WIDTH = 1000;
+const MAP_BASE_HEIGHT = 1100;
+
 const IndiaMapPageClean = () => {
   const [mapData, setMapData] = useState<StateData[]>(
     INDIAN_STATES.map(state => ({
@@ -345,6 +348,49 @@ const IndiaMapPageClean = () => {
       const svgClone = svgRef.current.cloneNode(true) as SVGSVGElement;
       svgClone.setAttribute('width', width.toString());
       svgClone.setAttribute('height', height.toString());
+      svgClone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+      const exportScale = width / MAP_BASE_WIDTH;
+
+      const scaleNumericString = (value: string, factor: number) => {
+        const match = value.match(/(-?\\d*\\.?\\d+)([a-z%]*)/i);
+        if (!match) {
+          return value;
+        }
+        const [, numberPart, unit] = match;
+        const parsed = parseFloat(numberPart);
+        if (!Number.isFinite(parsed)) {
+          return value;
+        }
+        const scaledNumber = parseFloat((parsed * factor).toFixed(2));
+        return `${scaledNumber}${unit}`;
+      };
+
+      const scaleStyleProperty = (selector: string, property: string, factor: number) => {
+        svgClone.querySelectorAll<SVGElement>(selector).forEach((element) => {
+          const current = element.style.getPropertyValue(property);
+          if (current) {
+            element.style.setProperty(property, scaleNumericString(current, factor));
+          }
+        });
+      };
+
+      const scaleAttribute = (selector: string, attribute: string, factor: number) => {
+        svgClone.querySelectorAll<SVGElement>(selector).forEach((element) => {
+          const current = element.getAttribute(attribute);
+          if (current) {
+            element.setAttribute(attribute, scaleNumericString(current, factor));
+          }
+        });
+      };
+
+      scaleAttribute('[data-export-role=\"map-title\"]', 'font-size', exportScale);
+      scaleAttribute('[data-export-role=\"map-source\"]', 'font-size', exportScale);
+      scaleStyleProperty('[data-export-role=\"state-label-name\"]', 'font-size', exportScale);
+      scaleStyleProperty('[data-export-role=\"state-label-value\"]', 'font-size', exportScale);
+      scaleStyleProperty('[data-export-role=\"state-connector\"]', 'stroke-width', exportScale);
+      scaleAttribute('[data-export-role=\"state-path\"]', 'stroke-width', exportScale);
+
       
       const svgData = new XMLSerializer().serializeToString(svgClone);
       const canvas = document.createElement('canvas');
@@ -365,7 +411,9 @@ const IndiaMapPageClean = () => {
           ctx.imageSmoothingQuality = 'high';
           
           // Draw the image
-          ctx.drawImage(img, 0, 0, width, height);
+          const marginX = Math.round(width * 0.045);
+          const marginY = Math.round(height * 0.05);
+          ctx.drawImage(img, marginX, marginY, width - marginX * 2, height - marginY * 2);
         }
 
         // Export as PNG with maximum quality
@@ -415,6 +463,25 @@ const IndiaMapPageClean = () => {
   };
 
   const colorScaleRanges = generateColorScaleLegend();
+  const legendGradientStops =
+    colorScaleRanges.length > 1
+      ? colorScaleRanges
+          .map((range, index) => {
+            const position =
+              colorScaleRanges.length === 1
+                ? 0
+                : (index / (colorScaleRanges.length - 1)) * 100;
+            return `${range.color} ${position}%`;
+          })
+          .join(', ')
+      : `${colorScaleRanges[0]?.color ?? '#e5e7eb'} 0%`;
+  const legendTickPositions = colorScaleRanges.map((range, index) => ({
+    label: range.label,
+    position:
+      colorScaleRanges.length === 1
+        ? 0
+        : (index / (colorScaleRanges.length - 1)) * 100
+  }));
 
   // Load and render map with D3
   useEffect(() => {
@@ -435,14 +502,15 @@ const IndiaMapPageClean = () => {
         const svg = d3.select(svgRef.current);
         svg.selectAll('*').remove();
 
-        const width = 1000;
-        const height = 1100; // Increased height to accommodate title and source
+        const width = MAP_BASE_WIDTH;
+        const height = MAP_BASE_HEIGHT; // Increased height to accommodate title and source
 
         svg.attr('viewBox', `0 0 ${width} ${height}`);
 
         // Add title at the top-right
         svg.append('text')
           .attr('class', 'map-title')
+          .attr('data-export-role', 'map-title')
           .attr('x', width - 150)
           .attr('y', 90)
           .attr('text-anchor', 'end')
@@ -547,6 +615,7 @@ const IndiaMapPageClean = () => {
           .attr('stroke', '#fff')
           .attr('stroke-width', 2)
           .attr('class', 'state')
+          .attr('data-export-role', 'state-path')
           .style('cursor', 'pointer')
           .style('transition', 'all 0.3s ease');
 
@@ -556,6 +625,7 @@ const IndiaMapPageClean = () => {
           .enter()
           .append('line')
           .attr('class', 'state-label-connector')
+          .attr('data-export-role', 'state-connector')
           .attr('x1', d => d.labelPosition.x + d.connectorOffset.x)
           .attr('y1', d => d.labelPosition.y + d.connectorOffset.y)
           .attr('x2', d => d.centroid[0])
@@ -575,6 +645,7 @@ const IndiaMapPageClean = () => {
 
         labelGroups.append('text')
           .attr('class', 'state-label-name state-label')
+          .attr('data-export-role', 'state-label-name')
           .attr('text-anchor', d => d.anchor)
           .attr('dominant-baseline', 'middle')
           .style('pointer-events', 'none')
@@ -591,6 +662,7 @@ const IndiaMapPageClean = () => {
 
         labelGroups.append('text')
           .attr('class', 'state-label-value')
+          .attr('data-export-role', 'state-label-value')
           .attr('text-anchor', d => d.anchor)
           .attr('dominant-baseline', 'hanging')
           .style('pointer-events', 'none')
@@ -614,6 +686,7 @@ const IndiaMapPageClean = () => {
         if (dataSource && dataSource.trim()) {
           svg.append('text')
             .attr('class', 'map-source')
+            .attr('data-export-role', 'map-source')
             .attr('x', width / 2)
             .attr('y', height - 20)
             .attr('text-anchor', 'middle')
@@ -655,15 +728,19 @@ const IndiaMapPageClean = () => {
       if (existingSource.empty()) {
         svg.append('text')
           .attr('class', 'map-source')
-          .attr('x', 500)
-          .attr('y', 1080)
+          .attr('data-export-role', 'map-source')
+          .attr('x', MAP_BASE_WIDTH / 2)
+          .attr('y', MAP_BASE_HEIGHT - 20)
           .attr('text-anchor', 'middle')
           .attr('font-size', '14px')
           .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
           .attr('fill', '#6b7280')
           .text(`Source: ${dataSource}`);
       } else {
-        existingSource.text(`Source: ${dataSource}`);
+        existingSource
+          .attr('x', MAP_BASE_WIDTH / 2)
+          .attr('y', MAP_BASE_HEIGHT - 20)
+          .text(`Source: ${dataSource}`);
       }
     } else {
       existingSource.remove();
@@ -1155,25 +1232,31 @@ const IndiaMapPageClean = () => {
           </div>
 
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
-            <h5 className="text-sm font-semibold text-gray-900 dark:text-white">Colour scale</h5>
-            <div className="mt-3 space-y-2">
-              {colorScaleRanges.map((range, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div
-                    className="h-6 w-6 rounded border border-gray-300 dark:border-gray-600"
-                    style={{ backgroundColor: range.color }}
-                  />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{range.label}</span>
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <span>Low</span>
+              <span>High</span>
+            </div>
+            <div
+              className="relative mt-4 h-4 rounded-full shadow-inner"
+              style={{ background: `linear-gradient(90deg, ${legendGradientStops})` }}
+            >
+              {legendTickPositions.map((tick, index) => (
+                <div
+                  key={index}
+                  className="absolute top-full mt-2 -translate-x-1/2 whitespace-nowrap text-[10px] font-medium text-gray-600 dark:text-gray-400"
+                  style={{ left: `${tick.position}%` }}
+                >
+                  {tick.label}
                 </div>
               ))}
-              <div className="mt-3 border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                <span className="font-semibold">Max value:</span> {maxValue}
-                {dataSource && (
-                  <span className="ml-2">
-                    • <span className="font-semibold">Source:</span> {dataSource}
-                  </span>
-                )}
-              </div>
+            </div>
+            <div className="mt-6 border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+              <span className="font-semibold">Max value:</span> {maxValue.toLocaleString()}
+              {dataSource && (
+                <span className="ml-2">
+                  • <span className="font-semibold">Source:</span> {dataSource}
+                </span>
+              )}
             </div>
           </div>
         </section>
