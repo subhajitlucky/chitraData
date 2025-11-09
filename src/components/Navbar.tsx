@@ -77,7 +77,7 @@ const Navbar = () => {
                 `${baseLinkClasses} ${isActive ? activeLinkClasses : ''}`
               }
             >
-              Create
+              Chart
             </NavLink>
             <NavLink
               to="/map"
@@ -85,7 +85,7 @@ const Navbar = () => {
                 `${baseLinkClasses} ${isActive ? activeLinkClasses : ''}`
               }
             >
-              India Map
+              Map
             </NavLink>
             <NavLink
               to="/gallery"
@@ -153,7 +153,7 @@ const Navbar = () => {
                   }`
                 }
               >
-                Create
+                Chart
               </NavLink>
               <NavLink
                 to="/map"
@@ -166,7 +166,7 @@ const Navbar = () => {
                   }`
                 }
               >
-                India Map
+                Map
               </NavLink>
               <NavLink
                 to="/gallery"

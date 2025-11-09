@@ -198,7 +198,7 @@ const IndiaMapPageClean = () => {
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [mapTitle, setMapTitle] = useState('India Map Visualization');
+  const [mapTitle, setMapTitle] = useState('Map Visualization');
   const [dataSource, setDataSource] = useState('');
   const svgRef = useRef<SVGSVGElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -893,7 +893,7 @@ const IndiaMapPageClean = () => {
 
             {/* Map Overview */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">India Map</h2>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Map</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Create a color-coded map of India with custom data values for each state and union territory
               </p>
@@ -1062,7 +1062,7 @@ const IndiaMapPageClean = () => {
           {/* Right Side - Map Preview */}
           <div className="lg:col-span-8">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">India Map</h2>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Map</h2>
               <div ref={mapContainerRef} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 min-h-[600px] flex items-center justify-center relative">
                 {!mapLoaded && (
                   <div className="absolute inset-0 flex items-center justify-center">

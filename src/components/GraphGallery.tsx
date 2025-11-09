@@ -134,13 +134,13 @@ const GraphGallery = () => {
             No graphs yet
           </h3>
           <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6">
-            You haven't saved any graphs yet. Create your first graph and save it to see it appear here.
+            You haven't saved any charts yet. Build your first chart and save it to see it appear here.
           </p>
           <button
             onClick={() => navigate('/create')}
             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Create Your First Graph
+            Build Your First Chart
           </button>
         </motion.div>
       ) : (
