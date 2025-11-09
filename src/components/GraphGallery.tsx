@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { GraphData } from '../types';
 import { motion } from 'framer-motion';
 import {
@@ -12,6 +13,7 @@ import {
 } from 'react-icons/fi';
 
 const GraphGallery = () => {
+  const navigate = useNavigate();
   interface DeleteStatus {
     type: 'success' | 'error' | 'info';
     message: string;
@@ -88,7 +90,7 @@ const GraphGallery = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <button
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-          onClick={() => (window.location.href = '/')}
+          onClick={() => navigate('/')}
         >
           <FiArrowLeft />
           <span>Back to Home</span>
@@ -135,7 +137,7 @@ const GraphGallery = () => {
             You haven't saved any graphs yet. Create your first graph and save it to see it appear here.
           </p>
           <button
-            onClick={() => (window.location.href = '/create')}
+            onClick={() => navigate('/create')}
             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
             Create Your First Graph

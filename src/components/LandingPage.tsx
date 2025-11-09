@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { FiBarChart2, FiPieChart, FiTrendingUp, FiActivity, FiChevronRight, FiMap } from 'react-icons/fi';
 
 const LandingPage = () => {
+  const navigate = useNavigate();
   const features = [
     {
       icon: FiBarChart2,
@@ -61,7 +63,7 @@ const LandingPage = () => {
           transition={{ delay: 0.6, duration: 0.5 }}
         >
           <button
-            onClick={() => (window.location.href = '/create')}
+            onClick={() => navigate('/create')}
             className="px-8 py-3 bg-blue-600 dark:bg-blue-700 text-white font-medium rounded-lg text-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center space-x-2 mx-auto"
           >
             <span>Create Your First Chart</span>
@@ -124,21 +126,21 @@ const LandingPage = () => {
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-xs sm:max-w-none mx-auto">
           <button
-            onClick={() => (window.location.href = '/create')}
+            onClick={() => navigate('/create')}
             className="px-8 py-3 bg-blue-600 dark:bg-blue-700 text-white font-medium rounded-lg text-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
             <span>Create Chart</span>
             <FiChevronRight />
           </button>
           <button
-            onClick={() => (window.location.href = '/map')}
+            onClick={() => navigate('/map')}
             className="px-8 py-3 bg-green-600 dark:bg-green-700 text-white font-medium rounded-lg text-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
             <FiMap className="text-xl" />
             <span>India Map</span>
           </button>
           <button
-            onClick={() => (window.location.href = '/gallery')}
+            onClick={() => navigate('/gallery')}
             className="px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium rounded-lg text-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors w-full sm:w-auto"
           >
             View Gallery
