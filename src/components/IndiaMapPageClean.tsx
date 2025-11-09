@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import * as d3 from 'd3';
 import { FiDownload, FiSave, FiRotateCcw, FiInfo, FiSliders, FiMap } from 'react-icons/fi';
 
 interface StateData {
   state: string;
-  value: number;
-  color: string;
+  rawValue: string;
+  numericValue: number | null;
   pathId: string;
 }
 
@@ -109,6 +109,27 @@ const STATE_INFO: Record<string, { capital: string; region: string }> = {
   'Puducherry': { capital: 'Puducherry', region: 'South' }
 };
 
+const CATEGORY_COLORS = [
+  '#2563eb',
+  '#16a34a',
+  '#f97316',
+  '#a855f7',
+  '#ef4444',
+  '#0ea5e9',
+  '#f59e0b',
+  '#10b981',
+  '#f472b6',
+  '#6366f1',
+  '#fb7185',
+  '#14b8a6',
+  '#dc2626',
+  '#22c55e',
+  '#facc15',
+  '#7c3aed',
+  '#9333ea',
+  '#1d4ed8'
+];
+
 type StateLabelConfig = {
   x: number;
   y: number;
@@ -185,6 +206,34 @@ const computeAutoConnectorOffset = (
 
 const getValueLineOffset = (meta: LabelMeta) => Math.max(meta.fontSize * 0.9, 10);
 
+const getValueFontSize = (meta: LabelMeta, stateData?: StateData) => {
+  const numericBase = Math.max(meta.fontSize - 4, 10);
+  if (!stateData) return numericBase;
+  if (stateData.numericValue !== null && Number.isFinite(stateData.numericValue)) {
+    return numericBase;
+  }
+  return Math.max(meta.fontSize - 2, numericBase + 2);
+};
+
+const parseNumericValue = (input: string): number | null => {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(/,/g, '');
+  if (!/^[-+]?(\\d+\\.?\\d*|\\.\\d+)$/.test(normalized)) {
+    return null;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 const MAP_BASE_WIDTH = 1000;
 const MAP_BASE_HEIGHT = 1100;
 
@@ -192,8 +241,8 @@ const IndiaMapPageClean = () => {
   const [mapData, setMapData] = useState<StateData[]>(
     INDIAN_STATES.map(state => ({
       state,
-      value: 0,
-      color: '#e5e7eb',
+      rawValue: '',
+      numericValue: null,
       pathId: state.toLowerCase().replace(/\s+/g, '-')
     }))
   );
@@ -208,8 +257,18 @@ const IndiaMapPageClean = () => {
   const labelMetaRef = useRef<LabelMeta[]>([]);
 
   const handleValueChange = (stateName: string, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setMapData(prev => prev.map(d => d.state === stateName ? { ...d, value: numValue } : d));
+    const numericValue = parseNumericValue(value);
+    setMapData(prev =>
+      prev.map(d =>
+        d.state === stateName
+          ? {
+              ...d,
+              rawValue: value,
+              numericValue
+            }
+          : d
+      )
+    );
   };
 
   const generateColor = (value: number, maxValue: number) => {
@@ -287,7 +346,54 @@ const IndiaMapPageClean = () => {
     }
   };
 
-  const maxValue = Math.max(...mapData.map(d => d.value), 1);
+  const numericValues = useMemo(
+    () =>
+      mapData
+        .map(d => d.numericValue)
+        .filter((value): value is number => value !== null && Number.isFinite(value)),
+    [mapData]
+  );
+
+  const maxNumericValue = Math.max(0, ...numericValues);
+  const hasNumericValues = numericValues.length > 0;
+
+  const categoryLegendItems = useMemo(() => {
+    const categoryMap = new Map<string, string>();
+    mapData.forEach(item => {
+      if (item.numericValue === null) {
+        const trimmed = item.rawValue.trim();
+        if (trimmed) {
+          const key = trimmed.toLowerCase();
+          if (!categoryMap.has(key)) {
+            categoryMap.set(key, trimmed);
+          }
+        }
+      }
+    });
+    return Array.from(categoryMap.entries()).map(([key, label]) => ({ key, label }));
+  }, [mapData]);
+
+  const categoryColorLookup = useMemo(() => {
+    const lookup = new Map<string, string>();
+    categoryLegendItems.forEach((item, index) => {
+      lookup.set(item.key, CATEGORY_COLORS[index % CATEGORY_COLORS.length]);
+    });
+    return lookup;
+  }, [categoryLegendItems]);
+
+  const hasCategoricalValues = categoryLegendItems.length > 0;
+
+  const getStateFillColor = (stateData: StateData) => {
+    if (stateData.numericValue !== null && Number.isFinite(stateData.numericValue)) {
+      return generateColor(stateData.numericValue, maxNumericValue);
+    }
+    const trimmed = stateData.rawValue.trim();
+    if (!trimmed) {
+      return '#e5e7eb';
+    }
+    const color = categoryColorLookup.get(trimmed.toLowerCase());
+    return color ?? '#9ca3af';
+  };
 
   const handleSave = () => {
     try {
@@ -312,8 +418,8 @@ const IndiaMapPageClean = () => {
   const handleReset = () => {
     setMapData(INDIAN_STATES.map(state => ({
       state,
-      value: 0,
-      color: '#e5e7eb',
+      rawValue: '',
+      numericValue: null,
       pathId: state.toLowerCase().replace(/\s+/g, '-')
     })));
     setSaveStatus('Map reset');
@@ -321,10 +427,16 @@ const IndiaMapPageClean = () => {
   };
 
   const generateRandomData = () => {
-    setMapData(prev => prev.map(d => ({
-      ...d,
-      value: Math.round(Math.random() * 1000)
-    })));
+    setMapData(prev =>
+      prev.map(d => {
+        const randomValue = Math.round(Math.random() * 1000);
+        return {
+          ...d,
+          numericValue: randomValue,
+          rawValue: randomValue.toString()
+        };
+      })
+    );
     setSaveStatus('Random data generated');
     setTimeout(() => setSaveStatus(null), 2000);
   };
@@ -445,18 +557,22 @@ const IndiaMapPageClean = () => {
 
   // Color scale legend generation
   const generateColorScaleLegend = () => {
-    if (maxValue === 0) {
+    if (!hasNumericValues) {
+      return [];
+    }
+
+    if (maxNumericValue === 0) {
       return [
         { min: 0, max: 0, color: '#e5e7eb', label: '0' }
       ];
     }
 
     const ranges = [
-      { min: 0, max: maxValue * 0.1, color: generateColor(maxValue * 0.05, maxValue), label: `0-${Math.round(maxValue * 0.1)}` },
-      { min: maxValue * 0.1, max: maxValue * 0.3, color: generateColor(maxValue * 0.2, maxValue), label: `${Math.round(maxValue * 0.1)}-${Math.round(maxValue * 0.3)}` },
-      { min: maxValue * 0.3, max: maxValue * 0.5, color: generateColor(maxValue * 0.4, maxValue), label: `${Math.round(maxValue * 0.3)}-${Math.round(maxValue * 0.5)}` },
-      { min: maxValue * 0.5, max: maxValue * 0.7, color: generateColor(maxValue * 0.6, maxValue), label: `${Math.round(maxValue * 0.5)}-${Math.round(maxValue * 0.7)}` },
-      { min: maxValue * 0.7, max: maxValue, color: generateColor(maxValue * 0.85, maxValue), label: `${Math.round(maxValue * 0.7)}-${maxValue}` }
+      { min: 0, max: maxNumericValue * 0.1, color: generateColor(maxNumericValue * 0.05, maxNumericValue), label: `0-${Math.round(maxNumericValue * 0.1)}` },
+      { min: maxNumericValue * 0.1, max: maxNumericValue * 0.3, color: generateColor(maxNumericValue * 0.2, maxNumericValue), label: `${Math.round(maxNumericValue * 0.1)}-${Math.round(maxNumericValue * 0.3)}` },
+      { min: maxNumericValue * 0.3, max: maxNumericValue * 0.5, color: generateColor(maxNumericValue * 0.4, maxNumericValue), label: `${Math.round(maxNumericValue * 0.3)}-${Math.round(maxNumericValue * 0.5)}` },
+      { min: maxNumericValue * 0.5, max: maxNumericValue * 0.7, color: generateColor(maxNumericValue * 0.6, maxNumericValue), label: `${Math.round(maxNumericValue * 0.5)}-${Math.round(maxNumericValue * 0.7)}` },
+      { min: maxNumericValue * 0.7, max: maxNumericValue, color: generateColor(maxNumericValue * 0.85, maxNumericValue), label: `${Math.round(maxNumericValue * 0.7)}-${maxNumericValue}` }
     ];
 
     return ranges;
@@ -596,9 +712,8 @@ const IndiaMapPageClean = () => {
           .style('font-family', 'system-ui, -apple-system, sans-serif')
           .style('line-height', '1.5');
 
-        const currentMaxValue = maxValue;
         const currentMapData = mapData;
-        const mapDataLookup = new Map(currentMapData.map(item => [item.state, item.value]));
+        const mapDataLookup = new Map(currentMapData.map(item => [item.state, item]));
 
         // Draw state/UT boundaries
         const paths = g.selectAll<SVGPathElement, any>('.state')
@@ -610,7 +725,7 @@ const IndiaMapPageClean = () => {
             const geoName = d.properties?.ST_NM || d.properties?.NAME_1 || d.properties?.name || '';
             const stateName = NAME_MAPPING[geoName] || geoName;
             const stateData = currentMapData.find(s => s.state === stateName);
-            return stateData ? generateColor(stateData.value, currentMaxValue) : '#e5e7eb';
+            return stateData ? getStateFillColor(stateData) : '#e5e7eb';
           })
           .attr('stroke', '#fff')
           .attr('stroke-width', 2)
@@ -666,7 +781,10 @@ const IndiaMapPageClean = () => {
           .attr('text-anchor', d => d.anchor)
           .attr('dominant-baseline', 'hanging')
           .style('pointer-events', 'none')
-          .style('font-size', d => `${Math.max(d.fontSize - 4, 10)}px`)
+          .style('font-size', d => {
+            const entry = mapDataLookup.get(d.stateName);
+            return `${getValueFontSize(d, entry)}px`;
+          })
           .style('font-weight', '600')
           .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
           .style('fill', '#1f2937')
@@ -676,8 +794,14 @@ const IndiaMapPageClean = () => {
           .style('letter-spacing', '0.3px')
           .attr('y', d => getValueLineOffset(d))
           .text(d => {
-            const value = mapDataLookup.get(d.stateName) ?? 0;
-            return value.toLocaleString();
+            const entry = mapDataLookup.get(d.stateName);
+            if (!entry) {
+              return '';
+            }
+            if (entry.numericValue !== null && Number.isFinite(entry.numericValue)) {
+              return entry.numericValue.toLocaleString();
+            }
+            return entry.rawValue.trim();
           });
 
         paths
@@ -714,9 +838,8 @@ const IndiaMapPageClean = () => {
     if (!mapLoaded || !svgRef.current) return;
 
     const svg = d3.select(svgRef.current);
-    const currentMaxValue = maxValue;
     const currentMapData = mapData;
-    const mapDataLookup = new Map(currentMapData.map(item => [item.state, item.value]));
+    const mapDataLookup = new Map(currentMapData.map(item => [item.state, item]));
 
     // Update title
     svg.select('.map-title')
@@ -755,7 +878,7 @@ const IndiaMapPageClean = () => {
         const geoName = d.properties?.ST_NM || d.properties?.NAME_1 || d.properties?.name || '';
         const stateName = NAME_MAPPING[geoName] || geoName;
         const stateData = currentMapData.find(s => s.state === stateName);
-        return stateData ? generateColor(stateData.value, currentMaxValue) : '#e5e7eb';
+        return stateData ? getStateFillColor(stateData) : '#e5e7eb';
       })
       // Update tooltip handlers to use current data
       .on('mouseover', function(this: SVGPathElement, _: MouseEvent, d: any) {
@@ -770,25 +893,37 @@ const IndiaMapPageClean = () => {
         const info = STATE_INFO[stateName];
 
         const tooltip = d3.select('.map-tooltip');
+        const isNumeric = stateData && stateData.numericValue !== null && Number.isFinite(stateData.numericValue);
+        const valueLabel = isNumeric ? 'Value' : 'Category';
+        const displayValue = stateData
+          ? isNumeric
+            ? stateData.numericValue!.toLocaleString()
+            : (stateData.rawValue.trim() || '—')
+          : '—';
+        const safeStateName = escapeHtml(stateName);
+        const safeDisplayValue = escapeHtml(displayValue);
+        const safeCapital = info ? escapeHtml(info.capital) : '';
+        const safeRegion = info ? escapeHtml(info.region) : '';
+
         tooltip
           .style('visibility', 'visible')
           .html(`
             <div style="font-weight: 600; font-size: 15px; margin-bottom: 8px; color: #60a5fa;">
-              ${stateName}
+              ${safeStateName}
             </div>
             <div style="opacity: 0.95; font-size: 13px;">
               <div style="margin: 4px 0;">
-                <span style="font-weight: 500; color: #93c5fd;">Value:</span>
-                <span style="font-weight: 600; margin-left: 8px;">${stateData?.value?.toLocaleString() || 0}</span>
+                <span style="font-weight: 500; color: #93c5fd;">${valueLabel}:</span>
+                <span style="font-weight: 600; margin-left: 8px;">${safeDisplayValue}</span>
               </div>
               ${info ? `
                 <div style="margin: 4px 0;">
                   <span style="font-weight: 500; color: #93c5fd;">Capital:</span>
-                  <span style="margin-left: 8px;">${info.capital}</span>
+                  <span style="margin-left: 8px;">${safeCapital}</span>
                 </div>
                 <div style="margin: 4px 0;">
                   <span style="font-weight: 500; color: #93c5fd;">Region:</span>
-                  <span style="margin-left: 8px;">${info.region}</span>
+                  <span style="margin-left: 8px;">${safeRegion}</span>
                 </div>
               ` : ''}
             </div>
@@ -826,15 +961,24 @@ const IndiaMapPageClean = () => {
     svg.selectAll<SVGTextElement, LabelMeta>('.state-label-value')
       .attr('text-anchor', d => d.anchor)
       .attr('y', d => getValueLineOffset(d))
-      .style('font-size', d => `${Math.max(d.fontSize - 4, 10)}px`)
+      .style('font-size', d => {
+        const entry = mapDataLookup.get(d.stateName);
+        return `${getValueFontSize(d, entry)}px`;
+      })
       .style('font-weight', '600')
       .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
       .style('stroke', '#ffffff')
       .style('stroke-width', '3px')
       .style('paint-order', 'stroke fill')
       .text(d => {
-        const value = mapDataLookup.get(d.stateName) ?? 0;
-        return value.toLocaleString();
+        const entry = mapDataLookup.get(d.stateName);
+        if (!entry) {
+          return '';
+        }
+        if (entry.numericValue !== null && Number.isFinite(entry.numericValue)) {
+          return entry.numericValue.toLocaleString();
+        }
+        return entry.rawValue.trim();
       });
 
     svg.selectAll<SVGLineElement, LabelMeta>('.state-label-connector')
@@ -842,7 +986,7 @@ const IndiaMapPageClean = () => {
       .attr('y1', d => d.labelPosition.y + d.connectorOffset.y)
       .attr('x2', d => d.centroid[0])
       .attr('y2', d => d.centroid[1]);
-  }, [mapData, maxValue, mapLoaded, colorScheme, mapTitle, dataSource]);
+  }, [mapData, maxNumericValue, mapLoaded, colorScheme, mapTitle, dataSource, categoryColorLookup]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50">
@@ -1051,7 +1195,7 @@ const IndiaMapPageClean = () => {
                     </div>
                   </div>
                   <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                    Input a value for each region to colour the map. Leave blank for zero.
+                    Input a number or category for each region. Leave blank to show a neutral colour.
                   </p>
                 </div>
               </div>
@@ -1167,7 +1311,7 @@ const IndiaMapPageClean = () => {
               <div className="mt-4 max-h-96 space-y-2 overflow-y-auto pr-2">
                 {mapData.map((stateData) => {
                   const info = STATE_INFO[stateData.state];
-                  const color = generateColor(stateData.value, maxValue);
+                  const color = getStateFillColor(stateData);
 
                   return (
                     <div
@@ -1189,11 +1333,11 @@ const IndiaMapPageClean = () => {
                         </div>
                       </div>
                       <input
-                        type="number"
-                        value={stateData.value}
+                        type="text"
+                        value={stateData.rawValue}
                         onChange={(e) => handleValueChange(stateData.state, e.target.value)}
                         className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
-                        placeholder="Value"
+                        placeholder="Value or category"
                       />
                     </div>
                   );
@@ -1232,26 +1376,67 @@ const IndiaMapPageClean = () => {
           </div>
 
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              <span>Low</span>
-              <span>High</span>
-            </div>
-            <div
-              className="relative mt-4 h-4 rounded-full shadow-inner"
-              style={{ background: `linear-gradient(90deg, ${legendGradientStops})` }}
-            >
-              {legendTickPositions.map((tick, index) => (
-                <div
-                  key={index}
-                  className="absolute top-full mt-2 -translate-x-1/2 whitespace-nowrap text-[10px] font-medium text-gray-600 dark:text-gray-400"
-                  style={{ left: `${tick.position}%` }}
-                >
-                  {tick.label}
+            {hasNumericValues ? (
+              <>
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <span>Low</span>
+                  <span>High</span>
                 </div>
-              ))}
-            </div>
-            <div className="mt-6 border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
-              <span className="font-semibold">Max value:</span> {maxValue.toLocaleString()}
+                <div
+                  className="relative mt-4 h-4 rounded-full shadow-inner"
+                  style={{ background: `linear-gradient(90deg, ${legendGradientStops})` }}
+                >
+                  {legendTickPositions.map((tick, index) => (
+                    <div
+                      key={index}
+                      className="absolute top-full mt-2 -translate-x-1/2 whitespace-nowrap text-[10px] font-medium text-gray-600 dark:text-gray-400"
+                      style={{ left: `${tick.position}%` }}
+                    >
+                      {tick.label}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                Add numeric values to see a continuous legend.
+              </div>
+            )}
+
+            {hasCategoricalValues && (
+              <div className={`mt-${hasNumericValues ? '6' : '4'} space-y-3`}>
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Categories
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {categoryLegendItems.map(item => (
+                    <div key={item.key} className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span
+                        className="inline-block h-3 w-3 rounded-full border border-white/40 shadow"
+                        style={{ backgroundColor: categoryColorLookup.get(item.key) ?? '#9ca3af' }}
+                      />
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className={`${hasNumericValues || hasCategoricalValues ? 'mt-6' : 'mt-4'} border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400`}>
+              {hasNumericValues ? (
+                <span>
+                  <span className="font-semibold">Max value:</span> {maxNumericValue.toLocaleString()}
+                </span>
+              ) : (
+                <span>
+                  <span className="font-semibold">Numeric data:</span> None yet
+                </span>
+              )}
+              {hasCategoricalValues && (
+                <span className="ml-2">
+                  • <span className="font-semibold">Categories:</span> {categoryLegendItems.length}
+                </span>
+              )}
               {dataSource && (
                 <span className="ml-2">
                   • <span className="font-semibold">Source:</span> {dataSource}
