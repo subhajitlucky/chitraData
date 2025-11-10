@@ -140,23 +140,25 @@ type StateLabelConfig = {
 
 const STATE_LABEL_OFFSETS: Record<string, StateLabelConfig> = {
   'Delhi': { x: 20, y: -10, anchor: 'start', fontSize: 12 },
-  'Chandigarh': { x: 0, y: -6, anchor: 'start', fontSize: 12 },
+  'Chandigarh': { x: 120, y: -50, anchor: 'middle', fontSize: 12,connectorOffset: {x: 30, y:0} },
   'Goa': { x: -52, y: 8, anchor: 'end', fontSize: 12 },
   'Sikkim': { x: 40, y: -10, anchor: 'middle', fontSize: 12, connectorOffset: {x: 10, y:0} },
   'Tripura': { x: -40, y: 40, anchor: 'start', fontSize: 11 },
-  'Manipur': { x: 10, y: 52, anchor: 'start', fontSize: 11 },
-  'Mizoram': { x: 10, y: 70, anchor: 'start', fontSize: 11 },
-  'Nagaland': { x: 60, y: 0, anchor: 'middle', fontSize: 12, connectorOffset: {x: 30, y:0} },
-  'Meghalaya': { x: -30, y: 30, anchor: 'start', fontSize: 11 },
-  'Assam': { x: 1, y: -1, anchor: 'start', fontSize: 12 },
+  'Manipur': { x: 10, y: 52, anchor: 'start', fontSize: 11, connectorOffset: {x: 30, y:0} },
+  'Mizoram': { x: 10, y: 70, anchor: 'start', fontSize: 11, connectorOffset: {x: 30, y:0} },
+  'Nagaland': { x: 60, y: 0, anchor: 'middle', fontSize: 12, connectorOffset: {x: 40, y:0} },
+  'Meghalaya': { x: -40, y: 30, anchor: 'start', fontSize: 11 },
+  'Assam': { x: 1, y: -1, anchor: 'start', fontSize: 12, connectorOffset: {x: 0, y:0} },
   'Puducherry': { x: 60, y: 24, anchor: 'start', fontSize: 12, connectorOffset: {x: 40, y:0} },
   'Dadra and Nagar Haveli and Daman and Diu': { x: -74, y: 0, anchor: 'end', fontSize: 12, connectorOffset: {x: -180, y:0} },
   'Lakshadweep': { x: -30, y: 38, anchor: 'end', fontSize: 12, connectorOffset: {x: -40, y:0} },
   'Andaman & Nicobar': { x: 10, y: 0, anchor: 'start', fontSize: 12, connectorOffset: {x: 40, y:0} },
-  'Jharkhand': { x: -25, y: 0, anchor: 'start', fontSize: 12 },
-  'West Bengal': { x: -10, y: 20, anchor: 'start', fontSize: 12 },
+  'Jharkhand': { x: -10, y: 0, anchor: 'middle', fontSize: 12 },
+  'West Bengal': { x: -25, y: 20, anchor: 'start', fontSize: 12 },
   'Kerala': { x: -50, y: 20, anchor: 'start', fontSize: 12, connectorOffset: {x: 5, y:0} },
-  'Arunachal Pradesh': { x: -25, y: -65, anchor: 'middle', fontSize: 12 }
+  'Arunachal Pradesh': { x: -25, y: -65, anchor: 'middle', fontSize: 12, connectorOffset: {x: 0, y:0} },
+  'Andhra Pradesh': { x: -50, y: 20, anchor: 'start', fontSize: 12, connectorOffset: {x: 0, y:0} },
+  'Karnataka': { x: -15, y: 20, anchor: 'middle', fontSize: 12, connectorOffset: {x: 0, y:0} },
 };
 
 interface LabelMeta {
@@ -234,8 +236,215 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+const TITLE_BOX_MARGIN_TOP = 16;
+const TITLE_BOX_MIN_WIDTH = 320;
+const TITLE_BOX_MAX_WIDTH = 420;
+const TITLE_BOX_HORIZONTAL_PADDING = 12;
+const TITLE_BOX_VERTICAL_PADDING = 10;
+const TITLE_MAX_LINES = 4;
+const TITLE_ANCHOR_OFFSET_X = 60;
+const TITLE_ANCHOR_OFFSET_Y = 16;
+
+const TITLE_FONT_SIZE = 28;
+const TITLE_LINE_HEIGHT = 1.25;
+const MAP_LEFT_MARGIN = 40;
+const MAP_RIGHT_MARGIN = 40;
+const MAP_BOTTOM_MARGIN = 80;
+const MAP_TOP_MARGIN_BASE = 28;
+const DEFAULT_TITLE_HEIGHT = TITLE_BOX_VERTICAL_PADDING * 2 + TITLE_FONT_SIZE * TITLE_LINE_HEIGHT;
+
 const MAP_BASE_WIDTH = 1000;
 const MAP_BASE_HEIGHT = 1100;
+
+type TitleLayoutMetrics = {
+  width: number;
+  height: number;
+  fontSize: number;
+  lineCount: number;
+};
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
+const computeMapTopMargin = (_titleHeight: number) => MAP_TOP_MARGIN_BASE;
+
+const wrapTitleText = (
+  textSelection: d3.Selection<SVGTextElement, unknown, null, undefined>,
+  titleValue: string
+): TitleLayoutMetrics => {
+  if (textSelection.empty()) {
+    return {
+      width: TITLE_BOX_MIN_WIDTH,
+      height: DEFAULT_TITLE_HEIGHT,
+      fontSize: TITLE_FONT_SIZE,
+      lineCount: 0
+    };
+  }
+
+  const sanitized = titleValue?.trim() ?? '';
+  const words = sanitized.length > 0 ? sanitized.split(/\s+/) : [''];
+
+  textSelection.attr('transform', 'translate(0, 0)');
+  textSelection.selectAll('tspan').remove();
+
+  let fontSize = TITLE_FONT_SIZE;
+  const minFontSize = 16;
+
+  const measure = textSelection.append('tspan')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('font-size', fontSize)
+    .text('');
+
+  const computeLinesForWidth = (innerWidth: number) => {
+    measure.attr('font-size', fontSize);
+    const lines: string[] = [];
+    let currentWords: string[] = [];
+
+    words.forEach(word => {
+      const candidate = currentWords.length ? `${currentWords.join(' ')} ${word}` : word;
+      measure.text(candidate);
+      const length = measure.node()?.getComputedTextLength() ?? 0;
+      if (length <= innerWidth || currentWords.length === 0) {
+        currentWords.push(word);
+      } else {
+        lines.push(currentWords.join(' '));
+        currentWords = [word];
+      }
+    });
+
+    if (currentWords.length) {
+      lines.push(currentWords.join(' '));
+    }
+
+    let maxLineWidth = 0;
+    lines.forEach(line => {
+      measure.text(line);
+      const length = measure.node()?.getComputedTextLength() ?? 0;
+      if (length > maxLineWidth) {
+        maxLineWidth = length;
+      }
+    });
+
+    return {
+      lines: lines.length ? lines : [''],
+      maxLineWidth
+    };
+  };
+
+  let longestWordWidth = 0;
+  words.forEach(word => {
+    measure.text(word);
+    const length = measure.node()?.getComputedTextLength() ?? 0;
+    if (length > longestWordWidth) {
+      longestWordWidth = length;
+    }
+  });
+
+  let boxWidth = clamp(
+    longestWordWidth + TITLE_BOX_HORIZONTAL_PADDING * 2,
+    TITLE_BOX_MIN_WIDTH,
+    TITLE_BOX_MAX_WIDTH
+  );
+
+  let linesResult = computeLinesForWidth(
+    Math.max(60, boxWidth - TITLE_BOX_HORIZONTAL_PADDING * 2)
+  );
+
+  const reduceFontIfNeeded = () => {
+    while (linesResult.lines.length > TITLE_MAX_LINES && fontSize > minFontSize) {
+      fontSize -= 2;
+      linesResult = computeLinesForWidth(
+        Math.max(60, boxWidth - TITLE_BOX_HORIZONTAL_PADDING * 2)
+      );
+    }
+  };
+
+  reduceFontIfNeeded();
+
+  for (let i = 0; i < 5; i++) {
+    const desiredWidth = linesResult.maxLineWidth + TITLE_BOX_HORIZONTAL_PADDING * 2;
+    const clampedWidth = clamp(desiredWidth, TITLE_BOX_MIN_WIDTH, TITLE_BOX_MAX_WIDTH);
+
+    if (Math.abs(clampedWidth - boxWidth) < 1) {
+      boxWidth = clampedWidth;
+      break;
+    }
+
+    boxWidth = clampedWidth;
+    linesResult = computeLinesForWidth(
+      Math.max(60, boxWidth - TITLE_BOX_HORIZONTAL_PADDING * 2)
+    );
+    reduceFontIfNeeded();
+  }
+
+  measure.remove();
+
+  const lineHeightPx = fontSize * TITLE_LINE_HEIGHT;
+
+  const textSelectionWithFont = textSelection
+    .attr('font-size', fontSize)
+    .attr('text-anchor', 'middle');
+
+  const tspans = textSelectionWithFont
+    .selectAll<SVGTextElement, string>('tspan')
+    .data(linesResult.lines);
+
+  tspans.exit().remove();
+
+  const merged = tspans
+    .enter()
+    .append('tspan')
+    .merge(tspans);
+
+  merged
+    .attr('x', 0)
+    .attr('y', (_, index) => index * lineHeightPx)
+    .text(d => d);
+
+  const textNode = textSelection.node();
+  const bbox = textNode?.getBBox();
+
+  const fallbackContentWidth =
+    linesResult.maxLineWidth > 0 ? linesResult.maxLineWidth : fontSize;
+  const fallbackContentHeight =
+    linesResult.lines.length > 1
+      ? (linesResult.lines.length - 1) * lineHeightPx + fontSize
+      : fontSize;
+
+  const contentWidth = bbox?.width ?? fallbackContentWidth;
+  const contentHeight = bbox?.height ?? fallbackContentHeight;
+
+  const finalWidth = clamp(
+    Math.max(boxWidth, contentWidth + TITLE_BOX_HORIZONTAL_PADDING * 2),
+    TITLE_BOX_MIN_WIDTH,
+    TITLE_BOX_MAX_WIDTH
+  );
+  const finalHeight = Math.max(
+    contentHeight + TITLE_BOX_VERTICAL_PADDING * 2,
+    TITLE_BOX_VERTICAL_PADDING * 2 + fontSize
+  );
+
+  const innerCenterX =
+    TITLE_BOX_HORIZONTAL_PADDING + (finalWidth - TITLE_BOX_HORIZONTAL_PADDING * 2) / 2;
+  const innerCenterY =
+    TITLE_BOX_VERTICAL_PADDING + (finalHeight - TITLE_BOX_VERTICAL_PADDING * 2) / 2;
+
+  if (bbox) {
+    const offsetX = innerCenterX - (bbox.x + bbox.width / 2);
+    const offsetY = innerCenterY - (bbox.y + bbox.height / 2);
+    textSelection.attr('transform', `translate(${offsetX}, ${offsetY})`);
+  } else {
+    textSelection.attr('transform', `translate(${innerCenterX}, ${innerCenterY})`);
+  }
+
+  return {
+    width: finalWidth,
+    height: finalHeight,
+    fontSize,
+    lineCount: linesResult.lines.length
+  };
+};
 
 const IndiaMapPageClean = () => {
   const [mapData, setMapData] = useState<StateData[]>(
@@ -255,6 +464,9 @@ const IndiaMapPageClean = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const labelMetaRef = useRef<LabelMeta[]>([]);
+  const mapTopMarginRef = useRef<number>(computeMapTopMargin(DEFAULT_TITLE_HEIGHT));
+  const mapTranslateRef = useRef<number>(0);
+  const mapBoundsRef = useRef<[[number, number], [number, number]] | null>(null);
 
   const handleValueChange = (stateName: string, value: string) => {
     const numericValue = parseNumericValue(value);
@@ -496,7 +708,8 @@ const IndiaMapPageClean = () => {
         });
       };
 
-      scaleAttribute('[data-export-role=\"map-title\"]', 'font-size', exportScale);
+      scaleAttribute('[data-export-role=\"map-title-text\"]', 'font-size', exportScale);
+      scaleStyleProperty('[data-export-role=\"map-title-text\"]', 'letter-spacing', exportScale);
       scaleAttribute('[data-export-role=\"map-source\"]', 'font-size', exportScale);
       scaleStyleProperty('[data-export-role=\"state-label-name\"]', 'font-size', exportScale);
       scaleStyleProperty('[data-export-role=\"state-label-value\"]', 'font-size', exportScale);
@@ -623,25 +836,59 @@ const IndiaMapPageClean = () => {
 
         svg.attr('viewBox', `0 0 ${width} ${height}`);
 
-        // Add title at the top-right
-        svg.append('text')
-          .attr('class', 'map-title')
-          .attr('data-export-role', 'map-title')
-          .attr('x', width - 150)
-          .attr('y', 90)
-          .attr('text-anchor', 'end')
-          .attr('font-size', '28px')
-          .attr('font-weight', 'bold')
-          .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
+        // Add title box at the top-right
+        const titleGroup = svg.append('g')
+          .attr('class', 'map-title-group');
+
+        const titleTextSelection = titleGroup.append('text')
+          .attr('class', 'map-title-text')
+          .attr('data-export-role', 'map-title-text')
           .attr('fill', '#1f2937')
-          .text(mapTitle);
+          .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
+          .attr('font-weight', '700')
+          .style('letter-spacing', '0.35px')
+          .style('pointer-events', 'none');
+
+        const titleMetrics = wrapTitleText(titleTextSelection, mapTitle);
+
+        titleGroup.insert('rect', ':first-child')
+          .attr('class', 'map-title-box')
+          .attr('data-export-role', 'map-title-box')
+          .attr('width', titleMetrics.width)
+          .attr('height', titleMetrics.height)
+          .attr('fill', 'transparent')
+          .attr('pointer-events', 'none');
+
+        const mapTopMargin = computeMapTopMargin(titleMetrics.height);
+        mapTopMarginRef.current = mapTopMargin;
+        mapTranslateRef.current = 0;
 
         const projection = d3.geoMercator()
-          .fitExtent([[20, 70], [width - 20, height - 80]], geoData); // Adjusted for title and source space
+          .fitExtent([[MAP_LEFT_MARGIN, mapTopMargin], [width - MAP_RIGHT_MARGIN, height - MAP_BOTTOM_MARGIN]], geoData);
 
         const path = d3.geoPath().projection(projection);
 
-        const g = svg.append('g');
+        const mapBounds = path.bounds(geoData);
+        mapBoundsRef.current = mapBounds;
+        const [, minY] = mapBounds[0];
+        const [maxX] = mapBounds[1];
+
+        const anchorX = clamp(
+          maxX - titleMetrics.width - TITLE_ANCHOR_OFFSET_X,
+          MAP_LEFT_MARGIN,
+          width - titleMetrics.width - MAP_RIGHT_MARGIN
+        );
+        const anchorY = clamp(
+          minY + TITLE_ANCHOR_OFFSET_Y,
+          TITLE_BOX_MARGIN_TOP,
+          height - MAP_BOTTOM_MARGIN - titleMetrics.height
+        );
+
+        titleGroup.attr('transform', `translate(${anchorX}, ${anchorY})`);
+
+        const g = svg.append('g')
+          .attr('class', 'map-geo')
+          .attr('transform', 'translate(0, 0)');
 
         const labelMetadata: LabelMeta[] = geoData.features.map((feature: any) => {
           const stateName = getFeatureStateName(feature);
@@ -841,9 +1088,45 @@ const IndiaMapPageClean = () => {
     const currentMapData = mapData;
     const mapDataLookup = new Map(currentMapData.map(item => [item.state, item]));
 
-    // Update title
-    svg.select('.map-title')
-      .text(mapTitle);
+    const titleGroup = svg.select<SVGGElement>('.map-title-group');
+    const titleTextSelection = titleGroup.select<SVGTextElement>('.map-title-text');
+    if (!titleTextSelection.empty()) {
+      const titleMetrics = wrapTitleText(titleTextSelection, mapTitle);
+
+      const mapBounds = mapBoundsRef.current;
+      if (mapBounds) {
+        const [, minY] = mapBounds[0];
+        const [maxX] = mapBounds[1];
+        const anchorX = clamp(
+          maxX - titleMetrics.width - TITLE_ANCHOR_OFFSET_X,
+          MAP_LEFT_MARGIN,
+          MAP_BASE_WIDTH - titleMetrics.width - MAP_RIGHT_MARGIN
+        );
+        const anchorY = clamp(
+          minY + TITLE_ANCHOR_OFFSET_Y,
+          TITLE_BOX_MARGIN_TOP,
+          MAP_BASE_HEIGHT - MAP_BOTTOM_MARGIN - titleMetrics.height
+        );
+
+        titleGroup.attr(
+          'transform',
+          `translate(${anchorX}, ${anchorY})`
+        );
+      }
+
+      titleGroup.select<SVGRectElement>('.map-title-box')
+        .attr('width', titleMetrics.width)
+        .attr('height', titleMetrics.height);
+
+      const previousTopMargin = mapTopMarginRef.current;
+      const nextTopMargin = computeMapTopMargin(titleMetrics.height);
+      if (Math.abs(nextTopMargin - previousTopMargin) > 0.5) {
+        mapTopMarginRef.current = nextTopMargin;
+        mapTranslateRef.current += nextTopMargin - previousTopMargin;
+        svg.select<SVGGElement>('.map-geo')
+          .attr('transform', `translate(0, ${mapTranslateRef.current})`);
+      }
+    }
 
     // Update or create source
     const existingSource = svg.select('.map-source');
