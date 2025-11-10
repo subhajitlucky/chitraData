@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import * as d3 from 'd3';
-import { FiDownload, FiSave, FiRotateCcw, FiInfo, FiSliders, FiMap } from 'react-icons/fi';
+import { FiDownload, FiSave, FiRotateCcw, FiInfo, FiSliders, FiMap, FiMaximize2, FiBox } from 'react-icons/fi';
 
 interface StateData {
   state: string;
@@ -140,7 +140,7 @@ type StateLabelConfig = {
 
 const STATE_LABEL_OFFSETS: Record<string, StateLabelConfig> = {
   'Delhi': { x: 20, y: -10, anchor: 'start', fontSize: 12 },
-  'Chandigarh': { x: 120, y: -50, anchor: 'middle', fontSize: 12,connectorOffset: {x: 30, y:0} },
+  'Chandigarh': { x: 120, y: -50, anchor: 'middle', fontSize: 12, connectorOffset: { x: 30, y: 0 } },
   'Goa': { x: -52, y: 8, anchor: 'end', fontSize: 12 },
   'Sikkim': { x: 40, y: -10, anchor: 'middle', fontSize: 12, connectorOffset: {x: 10, y:0} },
   'Tripura': { x: -40, y: 40, anchor: 'start', fontSize: 11 },
@@ -181,10 +181,10 @@ const getFeatureStateName = (feature: any): string => {
 const getLabelFontSize = (stateName: string): number => {
   const config = STATE_LABEL_OFFSETS[stateName];
   if (config?.fontSize) return config.fontSize;
-  if (stateName.length > 16) return 11;
-  if (stateName.length > 14) return 12;
-  if (stateName.length > 12) return 13;
-  return 14;
+  if (stateName.length > 16) return 10;
+  if (stateName.length > 14) return 11;
+  if (stateName.length > 12) return 12;
+  return 13;
 };
 
 const computeAutoConnectorOffset = (
@@ -209,12 +209,12 @@ const computeAutoConnectorOffset = (
 const getValueLineOffset = (meta: LabelMeta) => Math.max(meta.fontSize * 0.9, 10);
 
 const getValueFontSize = (meta: LabelMeta, stateData?: StateData) => {
-  const numericBase = Math.max(meta.fontSize - 4, 10);
+  const numericBase = Math.max(meta.fontSize - 5, 9);
   if (!stateData) return numericBase;
   if (stateData.numericValue !== null && Number.isFinite(stateData.numericValue)) {
     return numericBase;
   }
-  return Math.max(meta.fontSize - 2, numericBase + 2);
+  return Math.max(meta.fontSize - 3, numericBase + 1);
 };
 
 const parseNumericValue = (input: string): number | null => {
@@ -242,19 +242,59 @@ const TITLE_BOX_MAX_WIDTH = 420;
 const TITLE_BOX_HORIZONTAL_PADDING = 12;
 const TITLE_BOX_VERTICAL_PADDING = 10;
 const TITLE_MAX_LINES = 4;
-const TITLE_ANCHOR_OFFSET_X = 60;
-const TITLE_ANCHOR_OFFSET_Y = 16;
 
-const TITLE_FONT_SIZE = 28;
+const TITLE_FONT_SIZE = 26;
 const TITLE_LINE_HEIGHT = 1.25;
-const MAP_LEFT_MARGIN = 40;
-const MAP_RIGHT_MARGIN = 40;
-const MAP_BOTTOM_MARGIN = 80;
-const MAP_TOP_MARGIN_BASE = 28;
+const MAP_BOTTOM_MARGIN_BASE = 80;
 const DEFAULT_TITLE_HEIGHT = TITLE_BOX_VERTICAL_PADDING * 2 + TITLE_FONT_SIZE * TITLE_LINE_HEIGHT;
 
-const MAP_BASE_WIDTH = 1000;
-const MAP_BASE_HEIGHT = 1100;
+type LayoutId = 'widescreen' | 'print43';
+type PaddingPreset = 'tight' | 'balanced' | 'roomy';
+
+type LayoutConfig = {
+  id: LayoutId;
+  label: string;
+  description: string;
+  viewBox: { width: number; height: number };
+  margins: { top: number; right: number; bottom: number; left: number };
+  titleAnchorOffset: { x: number; y: number };
+  aspectLabel: string;
+};
+
+const LAYOUT_CONFIGS: Record<LayoutId, LayoutConfig> = {
+  widescreen: {
+    id: 'widescreen',
+    label: 'Widescreen',
+    description: '16:9 • slides, dashboards, displays',
+    viewBox: { width: 1365, height: 768 },
+    margins: { top: 36, right: 60, bottom: 96, left: 60 },
+    titleAnchorOffset: { x: 32, y: 18 },
+    aspectLabel: '16:9'
+  },
+  print43: {
+    id: 'print43',
+    label: 'Print-friendly',
+    description: '4:3 • reports, posters, PDF',
+    viewBox: { width: 1200, height: 900 },
+    margins: { top: 32, right: 44, bottom: 100, left: 44 },
+    titleAnchorOffset: { x: 28, y: 22 },
+    aspectLabel: '4:3'
+  }
+};
+
+const PADDING_PRESETS: Record<PaddingPreset, { label: string; description: string; scale: number }> = {
+  tight: { label: 'Tight', description: 'Maximise map area', scale: 0.75 },
+  balanced: { label: 'Balanced', description: 'Default margins', scale: 1 },
+  roomy: { label: 'Roomy', description: 'Extra breathing space', scale: 1.25 }
+};
+
+type ResolutionPreset = '2k' | '4k' | '8k';
+
+const RESOLUTION_PRESETS: Record<ResolutionPreset, { label: string; description: string; longEdge: number }> = {
+  '2k': { label: '2K', description: 'Slides & dashboards', longEdge: 2560 },
+  '4k': { label: '4K', description: 'HD presentations & print', longEdge: 3840 },
+  '8k': { label: '8K', description: 'Poster & large-format', longEdge: 7680 }
+};
 
 type TitleLayoutMetrics = {
   width: number;
@@ -265,8 +305,6 @@ type TitleLayoutMetrics = {
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
-
-const computeMapTopMargin = (_titleHeight: number) => MAP_TOP_MARGIN_BASE;
 
 const wrapTitleText = (
   textSelection: d3.Selection<SVGTextElement, unknown, null, undefined>,
@@ -461,6 +499,64 @@ const IndiaMapPageClean = () => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [mapTitle, setMapTitle] = useState('Map Visualization');
   const [dataSource, setDataSource] = useState('');
+  const [layoutId, setLayoutId] = useState<LayoutId>('widescreen');
+  const [paddingPreset, setPaddingPreset] = useState<PaddingPreset>('balanced');
+
+  const layoutConfig = useMemo(() => LAYOUT_CONFIGS[layoutId], [layoutId]);
+  const paddingScale = useMemo(
+    () => PADDING_PRESETS[paddingPreset].scale,
+    [paddingPreset]
+  );
+  const layoutOptions = useMemo(() => Object.values(LAYOUT_CONFIGS), []);
+  const paddingOptions = useMemo(
+    () =>
+      Object.entries(PADDING_PRESETS) as Array<
+        [PaddingPreset, { label: string; description: string; scale: number }]
+      >,
+    []
+  );
+
+  const viewBoxWidth = layoutConfig.viewBox.width;
+  const viewBoxHeight = layoutConfig.viewBox.height;
+
+  const margins = useMemo(() => {
+    const top = Math.max(layoutConfig.margins.top * paddingScale, 16);
+    const left = Math.max(layoutConfig.margins.left * paddingScale, 16);
+    const right = Math.max(layoutConfig.margins.right * paddingScale, 16);
+    const bottom = Math.max(
+      layoutConfig.margins.bottom * paddingScale,
+      MAP_BOTTOM_MARGIN_BASE * 0.75
+    );
+    return { top, right, bottom, left };
+  }, [layoutConfig, paddingScale]);
+
+  const titleAnchorOffset = layoutConfig.titleAnchorOffset;
+  const mapBottomMargin = margins.bottom;
+
+  const computeMapTopMargin = useCallback(
+    (_titleHeight: number) => margins.top,
+    [margins.top]
+  );
+
+  const resolutionButtonStyles = useMemo(
+    () => ({
+      '2k': { base: 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20', text: 'text-blue-100' },
+      '4k': { base: 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20', text: 'text-purple-100' },
+      '8k': { base: 'bg-pink-600 hover:bg-pink-700 shadow-pink-600/20', text: 'text-pink-100' }
+    }),
+    []
+  );
+
+  const getResolutionDimensions = useCallback(
+    (preset: ResolutionPreset) => {
+      const info = RESOLUTION_PRESETS[preset];
+      const width = info.longEdge;
+      const height = Math.round(width * (viewBoxHeight / viewBoxWidth));
+      return { width, height };
+    },
+    [viewBoxHeight, viewBoxWidth]
+  );
+
   const svgRef = useRef<SVGSVGElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const labelMetaRef = useRef<LabelMeta[]>([]);
@@ -653,18 +749,13 @@ const IndiaMapPageClean = () => {
     setTimeout(() => setSaveStatus(null), 2000);
   };
 
-  const handleExport = async (resolution: '2k' | '4k' | '8k') => {
+  const handleExport = async (resolution: ResolutionPreset) => {
     if (!svgRef.current) return;
 
     try {
-      // Resolution settings
-      const resolutions = {
-        '2k': { width: 2560, height: 1440, label: '2K (2560×1440)' },
-        '4k': { width: 3840, height: 2160, label: '4K (3840×2160)' },
-        '8k': { width: 7680, height: 4320, label: '8K (7680×4320)' }
-      };
-
-      const { width, height, label } = resolutions[resolution];
+      const preset = RESOLUTION_PRESETS[resolution];
+      const { width, height } = getResolutionDimensions(resolution);
+      const label = `${preset.label} (${width}×${height})`;
       
       setSaveStatus(`Exporting ${label}...`);
 
@@ -674,7 +765,7 @@ const IndiaMapPageClean = () => {
       svgClone.setAttribute('height', height.toString());
       svgClone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
-      const exportScale = width / MAP_BASE_WIDTH;
+      const exportScale = width / viewBoxWidth;
 
       const scaleNumericString = (value: string, factor: number) => {
         const match = value.match(/(-?\\d*\\.?\\d+)([a-z%]*)/i);
@@ -831,8 +922,8 @@ const IndiaMapPageClean = () => {
         const svg = d3.select(svgRef.current);
         svg.selectAll('*').remove();
 
-        const width = MAP_BASE_WIDTH;
-        const height = MAP_BASE_HEIGHT; // Increased height to accommodate title and source
+        const width = viewBoxWidth;
+        const height = viewBoxHeight;
 
         svg.attr('viewBox', `0 0 ${width} ${height}`);
 
@@ -851,20 +942,12 @@ const IndiaMapPageClean = () => {
 
         const titleMetrics = wrapTitleText(titleTextSelection, mapTitle);
 
-        titleGroup.insert('rect', ':first-child')
-          .attr('class', 'map-title-box')
-          .attr('data-export-role', 'map-title-box')
-          .attr('width', titleMetrics.width)
-          .attr('height', titleMetrics.height)
-          .attr('fill', 'transparent')
-          .attr('pointer-events', 'none');
-
         const mapTopMargin = computeMapTopMargin(titleMetrics.height);
         mapTopMarginRef.current = mapTopMargin;
         mapTranslateRef.current = 0;
 
         const projection = d3.geoMercator()
-          .fitExtent([[MAP_LEFT_MARGIN, mapTopMargin], [width - MAP_RIGHT_MARGIN, height - MAP_BOTTOM_MARGIN]], geoData);
+          .fitExtent([[margins.left, mapTopMargin], [width - margins.right, height - mapBottomMargin]], geoData);
 
         const path = d3.geoPath().projection(projection);
 
@@ -874,17 +957,26 @@ const IndiaMapPageClean = () => {
         const [maxX] = mapBounds[1];
 
         const anchorX = clamp(
-          maxX - titleMetrics.width - TITLE_ANCHOR_OFFSET_X,
-          MAP_LEFT_MARGIN,
-          width - titleMetrics.width - MAP_RIGHT_MARGIN
+          maxX - titleMetrics.width - titleAnchorOffset.x,
+          margins.left,
+          width - titleMetrics.width - margins.right
         );
+        const desiredAnchorY = minY - titleMetrics.height - titleAnchorOffset.y;
         const anchorY = clamp(
-          minY + TITLE_ANCHOR_OFFSET_Y,
+          desiredAnchorY,
           TITLE_BOX_MARGIN_TOP,
-          height - MAP_BOTTOM_MARGIN - titleMetrics.height
+          height - mapBottomMargin - titleMetrics.height
         );
 
         titleGroup.attr('transform', `translate(${anchorX}, ${anchorY})`);
+
+        titleGroup.insert('rect', ':first-child')
+          .attr('class', 'map-title-box')
+          .attr('data-export-role', 'map-title-box')
+          .attr('width', titleMetrics.width)
+          .attr('height', titleMetrics.height)
+          .attr('fill', 'transparent')
+          .attr('pointer-events', 'none');
 
         const g = svg.append('g')
           .attr('class', 'map-geo')
@@ -1078,7 +1170,18 @@ const IndiaMapPageClean = () => {
     };
 
     loadMap();
-  }, []);
+  }, [
+    layoutId,
+    paddingPreset,
+    margins.left,
+    margins.right,
+    margins.top,
+    margins.bottom,
+    titleAnchorOffset.x,
+    titleAnchorOffset.y,
+    viewBoxWidth,
+    viewBoxHeight
+  ]);
 
   // Update colors and labels when data or color scheme changes
   useEffect(() => {
@@ -1098,14 +1201,15 @@ const IndiaMapPageClean = () => {
         const [, minY] = mapBounds[0];
         const [maxX] = mapBounds[1];
         const anchorX = clamp(
-          maxX - titleMetrics.width - TITLE_ANCHOR_OFFSET_X,
-          MAP_LEFT_MARGIN,
-          MAP_BASE_WIDTH - titleMetrics.width - MAP_RIGHT_MARGIN
+          maxX - titleMetrics.width - titleAnchorOffset.x,
+          margins.left,
+          viewBoxWidth - titleMetrics.width - margins.right
         );
+        const desiredAnchorY = minY - titleMetrics.height - titleAnchorOffset.y;
         const anchorY = clamp(
-          minY + TITLE_ANCHOR_OFFSET_Y,
+          desiredAnchorY,
           TITLE_BOX_MARGIN_TOP,
-          MAP_BASE_HEIGHT - MAP_BOTTOM_MARGIN - titleMetrics.height
+          viewBoxHeight - mapBottomMargin - titleMetrics.height
         );
 
         titleGroup.attr(
@@ -1135,8 +1239,8 @@ const IndiaMapPageClean = () => {
         svg.append('text')
           .attr('class', 'map-source')
           .attr('data-export-role', 'map-source')
-          .attr('x', MAP_BASE_WIDTH / 2)
-          .attr('y', MAP_BASE_HEIGHT - 20)
+          .attr('x', viewBoxWidth / 2)
+          .attr('y', viewBoxHeight - 20)
           .attr('text-anchor', 'middle')
           .attr('font-size', '14px')
           .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
@@ -1144,8 +1248,8 @@ const IndiaMapPageClean = () => {
           .text(`Source: ${dataSource}`);
       } else {
         existingSource
-          .attr('x', MAP_BASE_WIDTH / 2)
-          .attr('y', MAP_BASE_HEIGHT - 20)
+          .attr('x', viewBoxWidth / 2)
+          .attr('y', viewBoxHeight - 20)
           .text(`Source: ${dataSource}`);
       }
     } else {
@@ -1269,7 +1373,25 @@ const IndiaMapPageClean = () => {
       .attr('y1', d => d.labelPosition.y + d.connectorOffset.y)
       .attr('x2', d => d.centroid[0])
       .attr('y2', d => d.centroid[1]);
-  }, [mapData, maxNumericValue, mapLoaded, colorScheme, mapTitle, dataSource, categoryColorLookup]);
+  }, [
+    mapData,
+    maxNumericValue,
+    mapLoaded,
+    colorScheme,
+    mapTitle,
+    dataSource,
+    categoryColorLookup,
+    layoutId,
+    paddingPreset,
+    margins.left,
+    margins.right,
+    margins.top,
+    margins.bottom,
+    titleAnchorOffset.x,
+    titleAnchorOffset.y,
+    viewBoxWidth,
+    viewBoxHeight
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50">
@@ -1398,27 +1520,25 @@ const IndiaMapPageClean = () => {
               </button>
             </div>
             <div className="space-y-3 px-6 py-6">
-              <button
-                onClick={() => handleExport('2k')}
-                className="w-full rounded-xl bg-blue-600 px-4 py-4 text-left text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
-              >
-                <div className="text-base font-semibold">2K Quality</div>
-                <div className="text-xs text-blue-100">2560 × 1440 • Ideal for slides and dashboards</div>
-              </button>
-              <button
-                onClick={() => handleExport('4k')}
-                className="w-full rounded-xl bg-purple-600 px-4 py-4 text-left text-white shadow-lg shadow-purple-600/20 transition hover:bg-purple-700"
-              >
-                <div className="text-base font-semibold">4K Quality</div>
-                <div className="text-xs text-purple-100">3840 × 2160 • Perfect for HD displays and reports</div>
-              </button>
-              <button
-                onClick={() => handleExport('8k')}
-                className="w-full rounded-xl bg-pink-600 px-4 py-4 text-left text-white shadow-lg shadow-pink-600/20 transition hover:bg-pink-700"
-              >
-                <div className="text-base font-semibold">8K Quality</div>
-                <div className="text-xs text-pink-100">7680 × 4320 • Ready for large-format and print</div>
-              </button>
+              {(Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[]).map((preset) => {
+                const buttonStyle = resolutionButtonStyles[preset];
+                const { width: presetWidth, height: presetHeight } = getResolutionDimensions(preset);
+                const info = RESOLUTION_PRESETS[preset];
+                return (
+                  <button
+                    key={preset}
+                    onClick={() => handleExport(preset)}
+                    className={`w-full rounded-xl px-4 py-4 text-left text-white shadow-lg transition ${buttonStyle.base}`}
+                  >
+                    <div className="text-base font-semibold">
+                      {info.label} Quality
+                    </div>
+                    <div className={`text-xs ${buttonStyle.text}`}>
+                      {`${presetWidth} × ${presetHeight}`} • {info.description}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1463,6 +1583,80 @@ const IndiaMapPageClean = () => {
                         placeholder="e.g., World Bank, 2024 or https://data.gov.in"
                       />
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Appears below the legend for attribution.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-indigo-100 p-3 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                      <FiMaximize2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Canvas layout</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Switch aspect ratio and padding presets.</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {layoutOptions.map(option => {
+                        const descriptionParts = option.description.split('•').map(part => part.trim());
+                        const primaryLine = descriptionParts[0] ?? option.description;
+                        const secondaryLine = descriptionParts.slice(1).join(' • ');
+                        return (
+                          <button
+                            key={option.id}
+                            onClick={() => setLayoutId(option.id)}
+                            className={`min-w-[150px] flex-1 rounded-xl border px-4 py-3 text-left transition ${
+                              layoutId === option.id
+                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 ring-2 ring-indigo-400 dark:border-indigo-400'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-indigo-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                              <span>{option.label}</span>
+                              <span>{option.aspectLabel}</span>
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                              {primaryLine}
+                            </div>
+                            {secondaryLine && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {secondaryLine}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-amber-100 p-3 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+                          <FiBox className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Map padding</h4>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Control whitespace around the geography.</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {paddingOptions.map(([id, option]) => (
+                          <button
+                            key={id}
+                            onClick={() => setPaddingPreset(id)}
+                            className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
+                              paddingPreset === id
+                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 ring-2 ring-amber-400 dark:border-amber-400'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-amber-400'
+                            }`}
+                          >
+                            <div className="font-semibold text-gray-900 dark:text-white">{option.label}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{option.description}</div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
