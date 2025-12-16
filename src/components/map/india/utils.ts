@@ -7,8 +7,9 @@ import {
 } from './constants';
 import type { LabelMeta, StateData, TitleLayoutMetrics } from './types';
 
-export const getFeatureStateName = (feature: any): string => {
-  const geoName = feature?.properties?.ST_NM || feature?.properties?.NAME_1 || feature?.properties?.name || '';
+export const getFeatureStateName = (feature: unknown): string => {
+  const anyFeature = feature as { properties?: { ST_NM?: string; NAME_1?: string; name?: string } };
+  const geoName = anyFeature?.properties?.ST_NM || anyFeature?.properties?.NAME_1 || anyFeature?.properties?.name || '';
   return NAME_MAPPING[geoName] || geoName;
 };
 
