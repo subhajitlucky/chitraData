@@ -1,16 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { GraphData } from '../types';
+import type { GraphData } from '../../types';
 import { motion } from 'framer-motion';
-import {
-  FiDownload,
-  FiTrash2,
-  FiBarChart2,
-  FiArrowLeft,
-  FiTrendingUp,
-  FiPieChart,
-  FiActivity
-} from 'react-icons/fi';
+import { FiDownload, FiTrash2, FiBarChart2, FiArrowLeft } from 'react-icons/fi';
+import { ChartRenderer } from '../../utils/chartRenderer';
 
 const GraphGallery = () => {
   const navigate = useNavigate();
@@ -58,29 +51,29 @@ const GraphGallery = () => {
   };
 
   const renderChartPreview = (graph: GraphData) => {
-    // Simple preview component that shows chart type and data structure
+    // Lightweight, dependency-free preview using the DOM renderer
+    const safeChartType = (graph.type === 'doughnut' ? 'doughnut' : graph.type) as
+      | 'bar'
+      | 'line'
+      | 'pie'
+      | 'area'
+      | 'doughnut'
+      | 'scatter';
+
+    const rendererData = {
+      title: graph.title,
+      labels: graph.labels,
+      datasets: graph.datasets.map((ds, i) => ({
+        label: ds.label || `Series ${i + 1}`,
+        data: ds.data.join(', '),
+        color: (ds.color as string) || '#3b82f6'
+      })),
+      chartType: safeChartType
+    };
+
     return (
-      <div className="w-full h-40 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg">
-        <div className="text-center">
-          {graph.type === 'bar' && (
-            <FiBarChart2 className="mx-auto text-gray-400 text-3xl mb-2" />
-          )}
-          {graph.type === 'line' && (
-            <FiTrendingUp className="mx-auto text-gray-400 text-3xl mb-2" />
-          )}
-          {graph.type === 'pie' && (
-            <FiPieChart className="mx-auto text-gray-400 text-3xl mb-2" />
-          )}
-          {graph.type === 'area' && (
-            <FiActivity className="mx-auto text-gray-400 text-3xl mb-2" />
-          )}
-          {graph.type === 'doughnut' && (
-            <FiPieChart className="mx-auto text-gray-400 text-3xl mb-2" />
-          )}
-          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-            {graph.type} Chart
-          </p>
-        </div>
+      <div className="w-full h-44 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <ChartRenderer data={rendererData} />
       </div>
     );
   };

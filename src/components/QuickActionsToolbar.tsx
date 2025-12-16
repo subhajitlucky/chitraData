@@ -9,7 +9,7 @@ import {
   FiEye,
   FiRotateCcw
 } from 'react-icons/fi';
-import ExportDialog from './ExportDialog';
+import ExportDialog from './chart-builder/ExportDialog';
 
 interface QuickActionsToolbarProps {
   onSave: () => void;
@@ -172,7 +172,9 @@ export default function QuickActionsToolbar({
       <ExportDialog
         isOpen={showExportDialog}
         onClose={() => setShowExportDialog(false)}
-        onExport={(format, quality, size) => onExport(format, quality, size)}
+        onExport={(format: 'png' | 'pdf', quality: 'standard' | 'hd' | '2k' | '4k' | '8k', size: string) =>
+          onExport(format, quality, size)
+        }
       />
     </div>
   );

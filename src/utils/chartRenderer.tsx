@@ -8,7 +8,7 @@ interface ChartData {
     data: string;
     color: string;
   }[];
-  chartType: 'bar' | 'line' | 'pie' | 'area' | 'scatter';
+  chartType: 'bar' | 'line' | 'pie' | 'area' | 'scatter' | 'doughnut';
 }
 
 // Parse data string to array of numbers
@@ -422,6 +422,7 @@ export const ChartRenderer = ({ data }: { data: ChartData }) => {
     case 'line':
       return <LineChart data={data} />;
     case 'pie':
+    case 'doughnut':
       return <PieChart data={data} />;
     case 'area':
       return <AreaChart data={data} />;

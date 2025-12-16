@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiDroplet } from 'react-icons/fi';
-import type { ColorPalette } from '../utils/colorPalettes';
-import { COLOR_PALETTES } from '../utils/colorPalettes';
+import type { ColorPalette } from '../../utils/colorPalettes';
+import { COLOR_PALETTES } from '../../utils/colorPalettes';
 
 interface ColorPaletteSelectorProps {
   selectedPalette?: ColorPalette;
@@ -74,20 +74,22 @@ export default function ColorPaletteSelector({ selectedPalette, onSelect }: Colo
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2">
-        {filteredPalettes.map((palette) => (
-          <motion.div
-            key={palette.id}
-            whileHover={{ scale: 1.02 }}
-            onClick={() => onSelect(palette)}
-            onMouseEnter={() => setShowPreview(palette.id)}
-            onMouseLeave={() => setShowPreview(null)}
-            className={`p-4 rounded-lg cursor-pointer transition-all border-2 ${
-              selectedPalette?.id === palette.id
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 bg-gray-50 dark:bg-gray-700/50'
-            }`}
-          >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto p-1 -m-1">
+        {filteredPalettes.map((palette) => {
+          const isSelected = selectedPalette?.id === palette.id;
+          return (
+            <motion.div
+              key={palette.id}
+              whileHover={{ scale: 1.01 }}
+              onClick={() => onSelect(palette)}
+              onMouseEnter={() => setShowPreview(palette.id)}
+              onMouseLeave={() => setShowPreview(null)}
+              className={`p-4 rounded-lg cursor-pointer transition-all border-2 ${
+                isSelected
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-none'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 bg-gray-50 dark:bg-gray-700/50'
+              }`}
+            >
             <div className="flex items-center justify-between mb-2">
               <div>
                 <div className="font-semibold text-gray-800 dark:text-white text-sm">{palette.name}</div>
@@ -110,8 +112,9 @@ export default function ColorPaletteSelector({ selectedPalette, onSelect }: Colo
                 {palette.category} palette • {palette.colors.length} colors
               </div>
             )}
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

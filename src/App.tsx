@@ -1,9 +1,9 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import GraphCreationNew from './components/GraphCreationNew';
-import GraphGallery from './components/GraphGallery';
+import GraphCreationNew from './components/chart-builder/GraphCreationNew';
+import GraphGallery from './components/gallery/GraphGallery';
 import IndiaMapPageClean from './components/IndiaMapPageClean';
 import Navbar from './components/Navbar';
-import LandingPage from './components/LandingPage';
+import LandingPage from './components/landing/LandingPage';
 import Footer from './components/Footer';
 
 function App() {

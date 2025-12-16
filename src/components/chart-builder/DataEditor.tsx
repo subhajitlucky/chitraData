@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiCopy } from 'react-icons/fi';
 
 interface DataEditorProps {
@@ -12,6 +12,10 @@ const DataEditor = ({ labels, datasets, onChange }: DataEditorProps) => {
     labels,
     datasets
   });
+
+  useEffect(() => {
+    setData({ labels, datasets });
+  }, [labels, datasets]);
 
   const updateData = useCallback((newData: typeof data) => {
     setData(newData);

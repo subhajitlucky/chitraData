@@ -1,6 +1,7 @@
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
-import type { GraphData } from '../types';
+import type { GraphData } from '../../types';
 import { forwardRef } from 'react';
+import { COLOR_PALETTES } from '../../utils/colorPalettes';
 
 interface ChartPreviewProps {
   data: GraphData;
@@ -66,20 +67,17 @@ export const ChartPreview = forwardRef<HTMLDivElement, ChartPreviewProps>(({ dat
 
   if (data.type === 'pie' || data.type === 'doughnut') {
     const firstDataset = data.datasets[0];
+    const palette = COLOR_PALETTES.find((p) => p.id === 'colorblind-safe') || COLOR_PALETTES[0];
+    const sliceColors = data.labels.map((_, i) => palette.colors[i % palette.colors.length]);
+
     chartData = {
       labels: data.labels,
       datasets: [
         {
           label: firstDataset.label,
           data: firstDataset.data,
-          backgroundColor: data.labels.map((_, i) => {
-            const color = data.datasets[i]?.color || '#3b82f6';
-            return color + '80';
-          }),
-          borderColor: data.labels.map((_, i) => {
-            const color = data.datasets[i]?.color || '#3b82f6';
-            return color;
-          }),
+          backgroundColor: sliceColors.map((color) => `${color}80`),
+          borderColor: sliceColors,
           borderWidth: 2,
         },
       ],

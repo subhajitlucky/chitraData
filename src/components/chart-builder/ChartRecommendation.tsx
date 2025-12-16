@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { FiTrendingUp, FiBarChart2, FiPieChart, FiActivity } from 'react-icons/fi';
-import type { GraphType } from '../types';
-import type { ChartRecommendation } from '../utils/chartRecommendations';
+import type { GraphType } from '../../types';
+import type { ChartRecommendation } from '../../utils/chartRecommendations';
 
 interface ChartRecommendationProps {
   recommendations: ChartRecommendation[];

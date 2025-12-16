@@ -1,658 +1,84 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import * as d3 from 'd3';
-import { FiDownload, FiSave, FiRotateCcw, FiInfo, FiSliders, FiMap, FiMaximize2, FiBox } from 'react-icons/fi';
+import { useCallback, useMemo, useState } from 'react';
+import { FiDownload, FiInfo, FiMap, FiSliders } from 'react-icons/fi';
+import { ActionBar } from './map/india/ActionBar';
+import { ExportDialog } from './map/india/ExportDialog';
+import { LayoutPaddingPanel } from './map/india/LayoutPaddingPanel';
+import { MapInfoPanel } from './map/india/MapInfoPanel';
+import { PalettePanel } from './map/india/PalettePanel';
+import { ValueTable } from './map/india/ValueTable';
+import { MapPreviewSection } from './map/india/MapPreviewSection';
+import { LegendPanel } from './map/india/LegendPanel';
+import {
+  CATEGORY_COLORS,
+  INDIAN_STATES,
+  LAYOUT_CONFIGS,
+  PADDING_PRESETS,
+  RESOLUTION_BUTTON_STYLES,
+  RESOLUTION_PRESETS,
+  STATE_INFO
+} from './map/india/constants';
+import { colorFromScheme } from './map/india/colorScales';
+import { exportSvgAsPng } from './map/india/exportHelpers';
+import { useIndiaMapRenderer } from './map/india/useIndiaMapRenderer';
+import { parseNumericValue } from './map/india/utils';
+import type {
+  ColorScheme,
+  LayoutId,
+  PaddingPreset,
+  ResolutionPreset,
+  StateData
+} from './map/india/types';
 
-interface StateData {
-  state: string;
-  rawValue: string;
-  numericValue: number | null;
-  pathId: string;
-}
+const buildInitialData = (): StateData[] =>
+  INDIAN_STATES.map(state => ({
+    state,
+    rawValue: '',
+    numericValue: null,
+    pathId: state.toLowerCase().replace(/\s+/g, '-')
+  }));
 
-// Current Indian States and Union Territories (36 entities as per 2024)
-// Includes Ladakh as separate UT (post-2019) and Telangana (post-2014)
-const INDIAN_STATES = [
-  // States (28)
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
-  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
-  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-  // Union Territories (8)
-  'Andaman & Nicobar', 'Chandigarh', 'Delhi', 
-  'Dadra and Nagar Haveli and Daman and Diu',
-  'Jammu & Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
-];
-
-// Map GeoJSON names to standard names
-const NAME_MAPPING: Record<string, string> = {
-  'Andaman & Nicobar': 'Andaman & Nicobar',
-  'Andaman and Nicobar': 'Andaman & Nicobar',
-  'Andhra Pradesh': 'Andhra Pradesh',
-  'Arunachal Pradesh': 'Arunachal Pradesh',
-  'Assam': 'Assam',
-  'Bihar': 'Bihar',
-  'Chandigarh': 'Chandigarh',
-  'Chhattisgarh': 'Chhattisgarh',
-  'Dadra and Nagar Haveli and Daman and Diu': 'Dadra and Nagar Haveli and Daman and Diu',
-  'Dadra and Nagar Haveli': 'Dadra and Nagar Haveli and Daman and Diu',
-  'Daman and Diu': 'Dadra and Nagar Haveli and Daman and Diu',
-  'Delhi': 'Delhi',
-  'Goa': 'Goa',
-  'Gujarat': 'Gujarat',
-  'Haryana': 'Haryana',
-  'Himachal Pradesh': 'Himachal Pradesh',
-  'Jammu & Kashmir': 'Jammu & Kashmir',
-  'Jammu and Kashmir': 'Jammu & Kashmir',
-  'Jharkhand': 'Jharkhand',
-  'Karnataka': 'Karnataka',
-  'Kerala': 'Kerala',
-  'Ladakh': 'Ladakh',
-  'Lakshadweep': 'Lakshadweep',
-  'Madhya Pradesh': 'Madhya Pradesh',
-  'Maharashtra': 'Maharashtra',
-  'Manipur': 'Manipur',
-  'Meghalaya': 'Meghalaya',
-  'Mizoram': 'Mizoram',
-  'Nagaland': 'Nagaland',
-  'Orissa': 'Odisha',
-  'Odisha': 'Odisha',
-  'Puducherry': 'Puducherry',
-  'Punjab': 'Punjab',
-  'Rajasthan': 'Rajasthan',
-  'Sikkim': 'Sikkim',
-  'Tamil Nadu': 'Tamil Nadu',
-  'Telangana': 'Telangana',
-  'Tripura': 'Tripura',
-  'Uttar Pradesh': 'Uttar Pradesh',
-  'Uttaranchal': 'Uttarakhand',
-  'Uttarakhand': 'Uttarakhand',
-  'West Bengal': 'West Bengal'
-};
-
-const STATE_INFO: Record<string, { capital: string; region: string }> = {
-  'Andhra Pradesh': { capital: 'Amaravati', region: 'South' },
-  'Arunachal Pradesh': { capital: 'Itanagar', region: 'Northeast' },
-  'Assam': { capital: 'Dispur', region: 'Northeast' },
-  'Bihar': { capital: 'Patna', region: 'East' },
-  'Chhattisgarh': { capital: 'Raipur', region: 'Central' },
-  'Goa': { capital: 'Panaji', region: 'West' },
-  'Gujarat': { capital: 'Gandhinagar', region: 'West' },
-  'Haryana': { capital: 'Chandigarh', region: 'North' },
-  'Himachal Pradesh': { capital: 'Shimla', region: 'North' },
-  'Jharkhand': { capital: 'Ranchi', region: 'East' },
-  'Karnataka': { capital: 'Bengaluru', region: 'South' },
-  'Kerala': { capital: 'Thiruvananthapuram', region: 'South' },
-  'Madhya Pradesh': { capital: 'Bhopal', region: 'Central' },
-  'Maharashtra': { capital: 'Mumbai', region: 'West' },
-  'Manipur': { capital: 'Imphal', region: 'Northeast' },
-  'Meghalaya': { capital: 'Shillong', region: 'Northeast' },
-  'Mizoram': { capital: 'Aizawl', region: 'Northeast' },
-  'Nagaland': { capital: 'Kohima', region: 'Northeast' },
-  'Odisha': { capital: 'Bhubaneswar', region: 'East' },
-  'Punjab': { capital: 'Chandigarh', region: 'North' },
-  'Rajasthan': { capital: 'Jaipur', region: 'West' },
-  'Sikkim': { capital: 'Gangtok', region: 'Northeast' },
-  'Tamil Nadu': { capital: 'Chennai', region: 'South' },
-  'Telangana': { capital: 'Hyderabad', region: 'South' },
-  'Tripura': { capital: 'Agartala', region: 'Northeast' },
-  'Uttar Pradesh': { capital: 'Lucknow', region: 'North' },
-  'Uttarakhand': { capital: 'Dehradun (Winter), Gairsain (Summer)', region: 'North' },
-  'West Bengal': { capital: 'Kolkata', region: 'East' },
-  'Andaman & Nicobar': { capital: 'Port Blair', region: 'Islands' },
-  'Chandigarh': { capital: 'Chandigarh', region: 'North' },
-  'Delhi': { capital: 'New Delhi', region: 'North' },
-  'Dadra and Nagar Haveli and Daman and Diu': { capital: 'Daman', region: 'West' },
-  'Jammu & Kashmir': { capital: 'Srinagar (Summer), Jammu (Winter)', region: 'North' },
-  'Ladakh': { capital: 'Leh', region: 'North' },
-  'Lakshadweep': { capital: 'Kavaratti', region: 'Islands' },
-  'Puducherry': { capital: 'Puducherry', region: 'South' }
-};
-
-const CATEGORY_COLORS = [
-  '#2563eb',
-  '#16a34a',
-  '#f97316',
-  '#a855f7',
-  '#ef4444',
-  '#0ea5e9',
-  '#f59e0b',
-  '#10b981',
-  '#f472b6',
-  '#6366f1',
-  '#fb7185',
-  '#14b8a6',
-  '#dc2626',
-  '#22c55e',
-  '#facc15',
-  '#7c3aed',
-  '#9333ea',
-  '#1d4ed8'
-];
-
-type StateLabelConfig = {
-  x: number;
-  y: number;
-  anchor?: 'start' | 'middle' | 'end';
-  fontSize?: number;
-  connectorOffset?: { x: number; y: number } | null;
-};
-
-const STATE_LABEL_OFFSETS: Record<string, StateLabelConfig> = {
-  'Delhi': { x: 20, y: -10, anchor: 'start', fontSize: 12 },
-  'Chandigarh': { x: 120, y: -50, anchor: 'middle', fontSize: 12, connectorOffset: { x: 30, y: 0 } },
-  'Goa': { x: -52, y: 8, anchor: 'end', fontSize: 12 },
-  'Sikkim': { x: 40, y: -10, anchor: 'middle', fontSize: 12, connectorOffset: {x: 10, y:0} },
-  'Tripura': { x: -40, y: 40, anchor: 'start', fontSize: 11 },
-  'Manipur': { x: 10, y: 52, anchor: 'start', fontSize: 11, connectorOffset: {x: 30, y:0} },
-  'Mizoram': { x: 10, y: 70, anchor: 'start', fontSize: 11, connectorOffset: {x: 30, y:0} },
-  'Nagaland': { x: 60, y: 0, anchor: 'middle', fontSize: 12, connectorOffset: {x: 40, y:0} },
-  'Meghalaya': { x: -40, y: 30, anchor: 'start', fontSize: 11 },
-  'Assam': { x: 1, y: -1, anchor: 'start', fontSize: 12, connectorOffset: {x: 0, y:0} },
-  'Puducherry': { x: 60, y: 24, anchor: 'start', fontSize: 12, connectorOffset: {x: 40, y:0} },
-  'Dadra and Nagar Haveli and Daman and Diu': { x: -74, y: 0, anchor: 'end', fontSize: 12, connectorOffset: {x: -180, y:0} },
-  'Lakshadweep': { x: -30, y: 38, anchor: 'end', fontSize: 12, connectorOffset: {x: -40, y:0} },
-  'Andaman & Nicobar': { x: 10, y: 0, anchor: 'start', fontSize: 12, connectorOffset: {x: 40, y:0} },
-  'Jharkhand': { x: -10, y: 0, anchor: 'middle', fontSize: 12 },
-  'West Bengal': { x: -25, y: 20, anchor: 'start', fontSize: 12 },
-  'Kerala': { x: -50, y: 20, anchor: 'start', fontSize: 12, connectorOffset: {x: 5, y:0} },
-  'Arunachal Pradesh': { x: -25, y: -65, anchor: 'middle', fontSize: 12, connectorOffset: {x: 0, y:0} },
-  'Andhra Pradesh': { x: -50, y: 20, anchor: 'start', fontSize: 12, connectorOffset: {x: 0, y:0} },
-  'Karnataka': { x: -15, y: 20, anchor: 'middle', fontSize: 12, connectorOffset: {x: 0, y:0} },
-};
-
-interface LabelMeta {
-  stateName: string;
-  labelPosition: { x: number; y: number };
-  centroid: [number, number];
-  anchor: 'start' | 'middle' | 'end';
-  fontSize: number;
-  labelHalfWidth: number;
-  labelHalfHeight: number;
-  connectorOffset: { x: number; y: number };
-  hasConnector: boolean;
-}
-
-const getFeatureStateName = (feature: any): string => {
-  const geoName = feature?.properties?.ST_NM || feature?.properties?.NAME_1 || feature?.properties?.name || '';
-  return NAME_MAPPING[geoName] || geoName;
-};
-
-const getLabelFontSize = (stateName: string): number => {
-  const config = STATE_LABEL_OFFSETS[stateName];
-  if (config?.fontSize) return config.fontSize;
-  if (stateName.length > 16) return 10;
-  if (stateName.length > 14) return 11;
-  if (stateName.length > 12) return 12;
-  return 13;
-};
-
-const computeAutoConnectorOffset = (
-  labelX: number,
-  labelY: number,
-  centroid: [number, number],
-  labelHalfWidth: number,
-  labelHalfHeight: number
+const createLegendRanges = (
+  hasNumericValues: boolean,
+  maxNumericValue: number,
+  generateColor: (value: number) => string
 ) => {
-  const dx = centroid[0] - labelX;
-  const dy = centroid[1] - labelY;
-  const distance = Math.sqrt(dx * dx + dy * dy) || 1;
-  const normX = dx / distance;
-  const normY = dy / distance;
-
-  return {
-    x: normX * labelHalfWidth,
-    y: normY * labelHalfHeight
-  };
-};
-
-const getValueLineOffset = (meta: LabelMeta) => Math.max(meta.fontSize * 0.9, 10);
-
-const getValueFontSize = (meta: LabelMeta, stateData?: StateData) => {
-  const numericBase = Math.max(meta.fontSize - 5, 9);
-  if (!stateData) return numericBase;
-  if (stateData.numericValue !== null && Number.isFinite(stateData.numericValue)) {
-    return numericBase;
+  if (!hasNumericValues) return [] as { min: number; max: number; color: string; label: string }[];
+  if (maxNumericValue === 0) {
+    return [{ min: 0, max: 0, color: '#e5e7eb', label: '0' }];
   }
-  return Math.max(meta.fontSize - 3, numericBase + 1);
-};
-
-const parseNumericValue = (input: string): number | null => {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  const normalized = trimmed.replace(/,/g, '');
-  if (!/^[-+]?(\\d+\\.?\\d*|\\.\\d+)$/.test(normalized)) {
-    return null;
-  }
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-const TITLE_BOX_MARGIN_TOP = 16;
-const TITLE_BOX_MIN_WIDTH = 320;
-const TITLE_BOX_MAX_WIDTH = 420;
-const TITLE_BOX_HORIZONTAL_PADDING = 12;
-const TITLE_BOX_VERTICAL_PADDING = 10;
-const TITLE_MAX_LINES = 4;
-
-const TITLE_FONT_SIZE = 26;
-const TITLE_LINE_HEIGHT = 1.25;
-const MAP_BOTTOM_MARGIN_BASE = 80;
-const DEFAULT_TITLE_HEIGHT = TITLE_BOX_VERTICAL_PADDING * 2 + TITLE_FONT_SIZE * TITLE_LINE_HEIGHT;
-
-type LayoutId = 'widescreen' | 'print43';
-type PaddingPreset = 'tight' | 'balanced' | 'roomy';
-
-type LayoutConfig = {
-  id: LayoutId;
-  label: string;
-  description: string;
-  viewBox: { width: number; height: number };
-  margins: { top: number; right: number; bottom: number; left: number };
-  titleAnchorOffset: { x: number; y: number };
-  aspectLabel: string;
-};
-
-const LAYOUT_CONFIGS: Record<LayoutId, LayoutConfig> = {
-  widescreen: {
-    id: 'widescreen',
-    label: 'Widescreen',
-    description: '16:9 • slides, dashboards, displays',
-    viewBox: { width: 1365, height: 768 },
-    margins: { top: 36, right: 60, bottom: 96, left: 60 },
-    titleAnchorOffset: { x: 32, y: 18 },
-    aspectLabel: '16:9'
-  },
-  print43: {
-    id: 'print43',
-    label: 'Print-friendly',
-    description: '4:3 • reports, posters, PDF',
-    viewBox: { width: 1200, height: 900 },
-    margins: { top: 32, right: 44, bottom: 100, left: 44 },
-    titleAnchorOffset: { x: 28, y: 22 },
-    aspectLabel: '4:3'
-  }
-};
-
-const PADDING_PRESETS: Record<PaddingPreset, { label: string; description: string; scale: number }> = {
-  tight: { label: 'Tight', description: 'Maximise map area', scale: 0.75 },
-  balanced: { label: 'Balanced', description: 'Default margins', scale: 1 },
-  roomy: { label: 'Roomy', description: 'Extra breathing space', scale: 1.25 }
-};
-
-type ResolutionPreset = '2k' | '4k' | '8k';
-
-const RESOLUTION_PRESETS: Record<ResolutionPreset, { label: string; description: string; longEdge: number }> = {
-  '2k': { label: '2K', description: 'Slides & dashboards', longEdge: 2560 },
-  '4k': { label: '4K', description: 'HD presentations & print', longEdge: 3840 },
-  '8k': { label: '8K', description: 'Poster & large-format', longEdge: 7680 }
-};
-
-type TitleLayoutMetrics = {
-  width: number;
-  height: number;
-  fontSize: number;
-  lineCount: number;
-};
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
-
-const wrapTitleText = (
-  textSelection: d3.Selection<SVGTextElement, unknown, null, undefined>,
-  titleValue: string
-): TitleLayoutMetrics => {
-  if (textSelection.empty()) {
-    return {
-      width: TITLE_BOX_MIN_WIDTH,
-      height: DEFAULT_TITLE_HEIGHT,
-      fontSize: TITLE_FONT_SIZE,
-      lineCount: 0
-    };
-  }
-
-  const sanitized = titleValue?.trim() ?? '';
-  const words = sanitized.length > 0 ? sanitized.split(/\s+/) : [''];
-
-  textSelection.attr('transform', 'translate(0, 0)');
-  textSelection.selectAll('tspan').remove();
-
-  let fontSize = TITLE_FONT_SIZE;
-  const minFontSize = 16;
-
-  const measure = textSelection.append('tspan')
-    .attr('x', 0)
-    .attr('y', 0)
-    .attr('font-size', fontSize)
-    .text('');
-
-  const computeLinesForWidth = (innerWidth: number) => {
-    measure.attr('font-size', fontSize);
-    const lines: string[] = [];
-    let currentWords: string[] = [];
-
-    words.forEach(word => {
-      const candidate = currentWords.length ? `${currentWords.join(' ')} ${word}` : word;
-      measure.text(candidate);
-      const length = measure.node()?.getComputedTextLength() ?? 0;
-      if (length <= innerWidth || currentWords.length === 0) {
-        currentWords.push(word);
-      } else {
-        lines.push(currentWords.join(' '));
-        currentWords = [word];
-      }
-    });
-
-    if (currentWords.length) {
-      lines.push(currentWords.join(' '));
-    }
-
-    let maxLineWidth = 0;
-    lines.forEach(line => {
-      measure.text(line);
-      const length = measure.node()?.getComputedTextLength() ?? 0;
-      if (length > maxLineWidth) {
-        maxLineWidth = length;
-      }
-    });
-
-    return {
-      lines: lines.length ? lines : [''],
-      maxLineWidth
-    };
-  };
-
-  let longestWordWidth = 0;
-  words.forEach(word => {
-    measure.text(word);
-    const length = measure.node()?.getComputedTextLength() ?? 0;
-    if (length > longestWordWidth) {
-      longestWordWidth = length;
-    }
+  const ranges = [0.1, 0.3, 0.5, 0.7].map((end, idx, arr) => ({
+    min: maxNumericValue * (idx === 0 ? 0 : arr[idx - 1]),
+    max: maxNumericValue * end,
+    color: generateColor(maxNumericValue * ((idx === 0 ? 0.05 : arr[idx - 1] + end) / 2)),
+    label: `${Math.round(maxNumericValue * (idx === 0 ? 0 : arr[idx - 1]))}-${Math.round(maxNumericValue * end)}`
+  }));
+  ranges.push({
+    min: maxNumericValue * 0.7,
+    max: maxNumericValue,
+    color: generateColor(maxNumericValue * 0.85),
+    label: `${Math.round(maxNumericValue * 0.7)}-${maxNumericValue}`
   });
-
-  let boxWidth = clamp(
-    longestWordWidth + TITLE_BOX_HORIZONTAL_PADDING * 2,
-    TITLE_BOX_MIN_WIDTH,
-    TITLE_BOX_MAX_WIDTH
-  );
-
-  let linesResult = computeLinesForWidth(
-    Math.max(60, boxWidth - TITLE_BOX_HORIZONTAL_PADDING * 2)
-  );
-
-  const reduceFontIfNeeded = () => {
-    while (linesResult.lines.length > TITLE_MAX_LINES && fontSize > minFontSize) {
-      fontSize -= 2;
-      linesResult = computeLinesForWidth(
-        Math.max(60, boxWidth - TITLE_BOX_HORIZONTAL_PADDING * 2)
-      );
-    }
-  };
-
-  reduceFontIfNeeded();
-
-  for (let i = 0; i < 5; i++) {
-    const desiredWidth = linesResult.maxLineWidth + TITLE_BOX_HORIZONTAL_PADDING * 2;
-    const clampedWidth = clamp(desiredWidth, TITLE_BOX_MIN_WIDTH, TITLE_BOX_MAX_WIDTH);
-
-    if (Math.abs(clampedWidth - boxWidth) < 1) {
-      boxWidth = clampedWidth;
-      break;
-    }
-
-    boxWidth = clampedWidth;
-    linesResult = computeLinesForWidth(
-      Math.max(60, boxWidth - TITLE_BOX_HORIZONTAL_PADDING * 2)
-    );
-    reduceFontIfNeeded();
-  }
-
-  measure.remove();
-
-  const lineHeightPx = fontSize * TITLE_LINE_HEIGHT;
-
-  const textSelectionWithFont = textSelection
-    .attr('font-size', fontSize)
-    .attr('text-anchor', 'middle');
-
-  const tspans = textSelectionWithFont
-    .selectAll<SVGTextElement, string>('tspan')
-    .data(linesResult.lines);
-
-  tspans.exit().remove();
-
-  const merged = tspans
-    .enter()
-    .append('tspan')
-    .merge(tspans);
-
-  merged
-    .attr('x', 0)
-    .attr('y', (_, index) => index * lineHeightPx)
-    .text(d => d);
-
-  const textNode = textSelection.node();
-  const bbox = textNode?.getBBox();
-
-  const fallbackContentWidth =
-    linesResult.maxLineWidth > 0 ? linesResult.maxLineWidth : fontSize;
-  const fallbackContentHeight =
-    linesResult.lines.length > 1
-      ? (linesResult.lines.length - 1) * lineHeightPx + fontSize
-      : fontSize;
-
-  const contentWidth = bbox?.width ?? fallbackContentWidth;
-  const contentHeight = bbox?.height ?? fallbackContentHeight;
-
-  const finalWidth = clamp(
-    Math.max(boxWidth, contentWidth + TITLE_BOX_HORIZONTAL_PADDING * 2),
-    TITLE_BOX_MIN_WIDTH,
-    TITLE_BOX_MAX_WIDTH
-  );
-  const finalHeight = Math.max(
-    contentHeight + TITLE_BOX_VERTICAL_PADDING * 2,
-    TITLE_BOX_VERTICAL_PADDING * 2 + fontSize
-  );
-
-  const innerCenterX =
-    TITLE_BOX_HORIZONTAL_PADDING + (finalWidth - TITLE_BOX_HORIZONTAL_PADDING * 2) / 2;
-  const innerCenterY =
-    TITLE_BOX_VERTICAL_PADDING + (finalHeight - TITLE_BOX_VERTICAL_PADDING * 2) / 2;
-
-  if (bbox) {
-    const offsetX = innerCenterX - (bbox.x + bbox.width / 2);
-    const offsetY = innerCenterY - (bbox.y + bbox.height / 2);
-    textSelection.attr('transform', `translate(${offsetX}, ${offsetY})`);
-  } else {
-    textSelection.attr('transform', `translate(${innerCenterX}, ${innerCenterY})`);
-  }
-
-  return {
-    width: finalWidth,
-    height: finalHeight,
-    fontSize,
-    lineCount: linesResult.lines.length
-  };
+  return ranges;
 };
 
-const IndiaMapPageClean = () => {
-  const [mapData, setMapData] = useState<StateData[]>(
-    INDIAN_STATES.map(state => ({
-      state,
-      rawValue: '',
-      numericValue: null,
-      pathId: state.toLowerCase().replace(/\s+/g, '-')
-    }))
-  );
-  const [colorScheme, setColorScheme] = useState<'sequential' | 'diverging' | 'viridis' | 'plasma' | 'turbo' | 'grayscale'>('sequential');
+export default function IndiaMapPageClean() {
+  const [mapData, setMapData] = useState<StateData[]>(buildInitialData);
+  const [colorScheme, setColorScheme] = useState<ColorScheme>('sequential');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [mapTitle, setMapTitle] = useState('Map Visualization');
   const [dataSource, setDataSource] = useState('');
   const [layoutId, setLayoutId] = useState<LayoutId>('widescreen');
   const [paddingPreset, setPaddingPreset] = useState<PaddingPreset>('balanced');
 
-  const layoutConfig = useMemo(() => LAYOUT_CONFIGS[layoutId], [layoutId]);
-  const paddingScale = useMemo(
-    () => PADDING_PRESETS[paddingPreset].scale,
-    [paddingPreset]
-  );
   const layoutOptions = useMemo(() => Object.values(LAYOUT_CONFIGS), []);
   const paddingOptions = useMemo(
-    () =>
-      Object.entries(PADDING_PRESETS) as Array<
-        [PaddingPreset, { label: string; description: string; scale: number }]
-      >,
+    () => Object.entries(PADDING_PRESETS) as Array<[
+      PaddingPreset,
+      { label: string; description: string; scale: number }
+    ]>,
     []
   );
-
-  const viewBoxWidth = layoutConfig.viewBox.width;
-  const viewBoxHeight = layoutConfig.viewBox.height;
-
-  const margins = useMemo(() => {
-    const top = Math.max(layoutConfig.margins.top * paddingScale, 16);
-    const left = Math.max(layoutConfig.margins.left * paddingScale, 16);
-    const right = Math.max(layoutConfig.margins.right * paddingScale, 16);
-    const bottom = Math.max(
-      layoutConfig.margins.bottom * paddingScale,
-      MAP_BOTTOM_MARGIN_BASE * 0.75
-    );
-    return { top, right, bottom, left };
-  }, [layoutConfig, paddingScale]);
-
-  const titleAnchorOffset = layoutConfig.titleAnchorOffset;
-  const mapBottomMargin = margins.bottom;
-
-  const computeMapTopMargin = useCallback(
-    (_titleHeight: number) => margins.top,
-    [margins.top]
-  );
-
-  const resolutionButtonStyles = useMemo(
-    () => ({
-      '2k': { base: 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20', text: 'text-blue-100' },
-      '4k': { base: 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20', text: 'text-purple-100' },
-      '8k': { base: 'bg-pink-600 hover:bg-pink-700 shadow-pink-600/20', text: 'text-pink-100' }
-    }),
-    []
-  );
-
-  const getResolutionDimensions = useCallback(
-    (preset: ResolutionPreset) => {
-      const info = RESOLUTION_PRESETS[preset];
-      const width = info.longEdge;
-      const height = Math.round(width * (viewBoxHeight / viewBoxWidth));
-      return { width, height };
-    },
-    [viewBoxHeight, viewBoxWidth]
-  );
-
-  const svgRef = useRef<SVGSVGElement>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const labelMetaRef = useRef<LabelMeta[]>([]);
-  const mapTopMarginRef = useRef<number>(computeMapTopMargin(DEFAULT_TITLE_HEIGHT));
-  const mapTranslateRef = useRef<number>(0);
-  const mapBoundsRef = useRef<[[number, number], [number, number]] | null>(null);
-
-  const handleValueChange = (stateName: string, value: string) => {
-    const numericValue = parseNumericValue(value);
-    setMapData(prev =>
-      prev.map(d =>
-        d.state === stateName
-          ? {
-              ...d,
-              rawValue: value,
-              numericValue
-            }
-          : d
-      )
-    );
-  };
-
-  const generateColor = (value: number, maxValue: number) => {
-    if (maxValue === 0) return '#e5e7eb';
-    const intensity = value / maxValue;
-
-    switch (colorScheme) {
-      case 'sequential':
-        // Blue gradient (classic choropleth)
-        return `rgb(${Math.round(59 + 196 * intensity)}, ${Math.round(130 + 50 * intensity)}, ${Math.round(246 - 146 * intensity)})`;
-      
-      case 'diverging':
-        // Red to Blue (diverging scale for showing positive/negative or extremes)
-        return intensity > 0.5
-          ? `rgb(${Math.round(59 + 196 * (intensity - 0.5) * 2)}, ${Math.round(130 + 50 * (1 - (intensity - 0.5) * 2))}, ${Math.round(246 - 146 * (1 - (intensity - 0.5) * 2))})`
-          : `rgb(${Math.round(239)}, ${Math.round(68 - 68 * intensity)}, ${Math.round(100 + 146 * intensity)})`;
-      
-      case 'viridis':
-        // Viridis - Professional colorblind-friendly gradient (Purple to Yellow-Green)
-        // Widely used in scientific visualization
-        const viridisColors = [
-          [68, 1, 84],      // Dark purple
-          [59, 82, 139],    // Blue-purple
-          [33, 145, 140],   // Teal
-          [94, 201, 98],    // Green
-          [253, 231, 37]    // Yellow
-        ];
-        const vIdx = Math.min(Math.floor(intensity * 4), 3);
-        const vFrac = (intensity * 4) - vIdx;
-        const vC1 = viridisColors[vIdx];
-        const vC2 = viridisColors[vIdx + 1];
-        return `rgb(${Math.round(vC1[0] + (vC2[0] - vC1[0]) * vFrac)}, ${Math.round(vC1[1] + (vC2[1] - vC1[1]) * vFrac)}, ${Math.round(vC1[2] + (vC2[2] - vC1[2]) * vFrac)})`;
-      
-      case 'plasma':
-        // Plasma - Another professional colorblind-friendly gradient (Purple to Pink to Yellow)
-        // Popular in data science and machine learning visualizations
-        const plasmaColors = [
-          [13, 8, 135],     // Dark purple
-          [126, 3, 168],    // Purple
-          [204, 71, 120],   // Pink
-          [248, 149, 64],   // Orange
-          [240, 249, 33]    // Yellow
-        ];
-        const pIdx = Math.min(Math.floor(intensity * 4), 3);
-        const pFrac = (intensity * 4) - pIdx;
-        const pC1 = plasmaColors[pIdx];
-        const pC2 = plasmaColors[pIdx + 1];
-        return `rgb(${Math.round(pC1[0] + (pC2[0] - pC1[0]) * pFrac)}, ${Math.round(pC1[1] + (pC2[1] - pC1[1]) * pFrac)}, ${Math.round(pC1[2] + (pC2[2] - pC1[2]) * pFrac)})`;
-      
-      case 'turbo':
-        // Turbo - Google's rainbow gradient (Blue to Cyan to Green to Yellow to Red)
-        // Designed to replace jet colormap with better perceptual uniformity
-        const turboColors = [
-          [48, 18, 59],     // Dark blue
-          [33, 102, 172],   // Blue
-          [68, 191, 193],   // Cyan
-          [144, 215, 67],   // Green
-          [253, 231, 37],   // Yellow
-          [234, 51, 35]     // Red
-        ];
-        const tIdx = Math.min(Math.floor(intensity * 5), 4);
-        const tFrac = (intensity * 5) - tIdx;
-        const tC1 = turboColors[tIdx];
-        const tC2 = turboColors[tIdx + 1];
-        return `rgb(${Math.round(tC1[0] + (tC2[0] - tC1[0]) * tFrac)}, ${Math.round(tC1[1] + (tC2[1] - tC1[1]) * tFrac)}, ${Math.round(tC1[2] + (tC2[2] - tC1[2]) * tFrac)})`;
-      
-      case 'grayscale':
-        // Grayscale - Professional black to white gradient
-        // Perfect for printing and formal documents
-        const gray = Math.round(255 * intensity);
-        return `rgb(${gray}, ${gray}, ${gray})`;
-      
-      default:
-        return '#e5e7eb';
-    }
-  };
 
   const numericValues = useMemo(
     () =>
@@ -661,8 +87,7 @@ const IndiaMapPageClean = () => {
         .filter((value): value is number => value !== null && Number.isFinite(value)),
     [mapData]
   );
-
-  const maxNumericValue = Math.max(0, ...numericValues);
+  const maxNumericValue = useMemo(() => Math.max(0, ...numericValues), [numericValues]);
   const hasNumericValues = numericValues.length > 0;
 
   const categoryLegendItems = useMemo(() => {
@@ -689,18 +114,65 @@ const IndiaMapPageClean = () => {
     return lookup;
   }, [categoryLegendItems]);
 
-  const hasCategoricalValues = categoryLegendItems.length > 0;
+  const generateColor = useCallback(
+    (value: number) => colorFromScheme(value, maxNumericValue, colorScheme),
+    [colorScheme, maxNumericValue]
+  );
 
-  const getStateFillColor = (stateData: StateData) => {
-    if (stateData.numericValue !== null && Number.isFinite(stateData.numericValue)) {
-      return generateColor(stateData.numericValue, maxNumericValue);
-    }
-    const trimmed = stateData.rawValue.trim();
-    if (!trimmed) {
-      return '#e5e7eb';
-    }
-    const color = categoryColorLookup.get(trimmed.toLowerCase());
-    return color ?? '#9ca3af';
+  const getStateFillColor = useCallback(
+    (stateData: StateData) => {
+      if (stateData.numericValue !== null && Number.isFinite(stateData.numericValue)) {
+        return generateColor(stateData.numericValue);
+      }
+      const trimmed = stateData.rawValue.trim();
+      if (!trimmed) return '#e5e7eb';
+      return categoryColorLookup.get(trimmed.toLowerCase()) ?? '#9ca3af';
+    },
+    [categoryColorLookup, generateColor]
+  );
+
+  const legendRanges = useMemo(
+    () => createLegendRanges(hasNumericValues, maxNumericValue, generateColor),
+    [hasNumericValues, maxNumericValue, generateColor]
+  );
+
+  const legendGradientStops = legendRanges.length
+    ? legendRanges
+        .map((range, index) => {
+          const position = legendRanges.length === 1 ? 0 : (index / (legendRanges.length - 1)) * 100;
+          return `${range.color} ${position}%`;
+        })
+        .join(', ')
+    : '#e5e7eb 0%';
+
+  const legendTickPositions = legendRanges.map((range, index) => ({
+    label: range.label,
+    position: legendRanges.length === 1 ? 0 : (index / (legendRanges.length - 1)) * 100
+  }));
+
+  const getResolutionDimensions = useCallback(
+    (preset: ResolutionPreset) => {
+      const info = RESOLUTION_PRESETS[preset];
+      const width = info.longEdge;
+      const height = Math.round(width * (LAYOUT_CONFIGS[layoutId].viewBox.height / LAYOUT_CONFIGS[layoutId].viewBox.width));
+      return { width, height };
+    },
+    [layoutId]
+  );
+
+  const handleValueChange = (stateName: string, value: string) => {
+    const numericValue = parseNumericValue(value);
+    setMapData(prev =>
+      prev.map(d =>
+        d.state === stateName
+          ? {
+              ...d,
+              rawValue: value,
+              numericValue
+            }
+          : d
+      )
+    );
   };
 
   const handleSave = () => {
@@ -711,7 +183,7 @@ const IndiaMapPageClean = () => {
         data: mapData,
         title: mapTitle,
         source: dataSource,
-        colorScheme: colorScheme,
+        colorScheme,
         createdAt: new Date().toISOString()
       };
       savedMaps.push(newMap);
@@ -724,12 +196,7 @@ const IndiaMapPageClean = () => {
   };
 
   const handleReset = () => {
-    setMapData(INDIAN_STATES.map(state => ({
-      state,
-      rawValue: '',
-      numericValue: null,
-      pathId: state.toLowerCase().replace(/\s+/g, '-')
-    })));
+    setMapData(buildInitialData());
     setSaveStatus('Map reset');
     setTimeout(() => setSaveStatus(null), 2000);
   };
@@ -749,653 +216,36 @@ const IndiaMapPageClean = () => {
     setTimeout(() => setSaveStatus(null), 2000);
   };
 
-  const handleExport = async (resolution: ResolutionPreset) => {
+  const handleExport = async (preset: ResolutionPreset) => {
     if (!svgRef.current) return;
-
     try {
-      const preset = RESOLUTION_PRESETS[resolution];
-      const { width, height } = getResolutionDimensions(resolution);
-      const label = `${preset.label} (${width}×${height})`;
-      
-      setSaveStatus(`Exporting ${label}...`);
-
-      // Clone SVG and scale it
-      const svgClone = svgRef.current.cloneNode(true) as SVGSVGElement;
-      svgClone.setAttribute('width', width.toString());
-      svgClone.setAttribute('height', height.toString());
-      svgClone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-
-      const exportScale = width / viewBoxWidth;
-
-      const scaleNumericString = (value: string, factor: number) => {
-        const match = value.match(/(-?\\d*\\.?\\d+)([a-z%]*)/i);
-        if (!match) {
-          return value;
-        }
-        const [, numberPart, unit] = match;
-        const parsed = parseFloat(numberPart);
-        if (!Number.isFinite(parsed)) {
-          return value;
-        }
-        const scaledNumber = parseFloat((parsed * factor).toFixed(2));
-        return `${scaledNumber}${unit}`;
-      };
-
-      const scaleStyleProperty = (selector: string, property: string, factor: number) => {
-        svgClone.querySelectorAll<SVGElement>(selector).forEach((element) => {
-          const current = element.style.getPropertyValue(property);
-          if (current) {
-            element.style.setProperty(property, scaleNumericString(current, factor));
-          }
-        });
-      };
-
-      const scaleAttribute = (selector: string, attribute: string, factor: number) => {
-        svgClone.querySelectorAll<SVGElement>(selector).forEach((element) => {
-          const current = element.getAttribute(attribute);
-          if (current) {
-            element.setAttribute(attribute, scaleNumericString(current, factor));
-          }
-        });
-      };
-
-      scaleAttribute('[data-export-role=\"map-title-text\"]', 'font-size', exportScale);
-      scaleStyleProperty('[data-export-role=\"map-title-text\"]', 'letter-spacing', exportScale);
-      scaleAttribute('[data-export-role=\"map-source\"]', 'font-size', exportScale);
-      scaleStyleProperty('[data-export-role=\"state-label-name\"]', 'font-size', exportScale);
-      scaleStyleProperty('[data-export-role=\"state-label-value\"]', 'font-size', exportScale);
-      scaleStyleProperty('[data-export-role=\"state-connector\"]', 'stroke-width', exportScale);
-      scaleAttribute('[data-export-role=\"state-path\"]', 'stroke-width', exportScale);
-
-      
-      const svgData = new XMLSerializer().serializeToString(svgClone);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d', { alpha: false });
-      const img = new Image();
-
-      canvas.width = width;
-      canvas.height = height;
-
-      img.onload = () => {
-        if (ctx) {
-          // White background
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          // Enable image smoothing for better quality
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          
-          // Draw the image
-          const marginX = Math.round(width * 0.045);
-          const marginY = Math.round(height * 0.05);
-          ctx.drawImage(img, marginX, marginY, width - marginX * 2, height - marginY * 2);
-        }
-
-        // Export as PNG with maximum quality
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const link = document.createElement('a');
-            link.download = `india-map-${resolution}-${Date.now()}.png`;
-            link.href = URL.createObjectURL(blob);
-            link.click();
-            URL.revokeObjectURL(link.href);
-            setSaveStatus(`Map exported as ${label}!`);
-            setShowExportDialog(false);
-          }
-        }, 'image/png', 1.0);
-      };
-
-      img.onerror = () => {
-        setSaveStatus('Export failed');
-        setTimeout(() => setSaveStatus(null), 3000);
-      };
-
-      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+      const label = await exportSvgAsPng({
+        svgElement: svgRef.current,
+        resolution: preset,
+        resolutionPresets: RESOLUTION_PRESETS,
+        viewBoxWidth: LAYOUT_CONFIGS[layoutId].viewBox.width,
+        viewBoxHeight: LAYOUT_CONFIGS[layoutId].viewBox.height
+      });
+      setSaveStatus(`Map exported as ${label}!`);
+      setShowExportDialog(false);
     } catch (error) {
-      console.error('Export error:', error);
       setSaveStatus('Export failed');
-      setTimeout(() => setSaveStatus(null), 3000);
     }
+    setTimeout(() => setSaveStatus(null), 3000);
   };
 
-  // Color scale legend generation
-  const generateColorScaleLegend = () => {
-    if (!hasNumericValues) {
-      return [];
-    }
-
-    if (maxNumericValue === 0) {
-      return [
-        { min: 0, max: 0, color: '#e5e7eb', label: '0' }
-      ];
-    }
-
-    const ranges = [
-      { min: 0, max: maxNumericValue * 0.1, color: generateColor(maxNumericValue * 0.05, maxNumericValue), label: `0-${Math.round(maxNumericValue * 0.1)}` },
-      { min: maxNumericValue * 0.1, max: maxNumericValue * 0.3, color: generateColor(maxNumericValue * 0.2, maxNumericValue), label: `${Math.round(maxNumericValue * 0.1)}-${Math.round(maxNumericValue * 0.3)}` },
-      { min: maxNumericValue * 0.3, max: maxNumericValue * 0.5, color: generateColor(maxNumericValue * 0.4, maxNumericValue), label: `${Math.round(maxNumericValue * 0.3)}-${Math.round(maxNumericValue * 0.5)}` },
-      { min: maxNumericValue * 0.5, max: maxNumericValue * 0.7, color: generateColor(maxNumericValue * 0.6, maxNumericValue), label: `${Math.round(maxNumericValue * 0.5)}-${Math.round(maxNumericValue * 0.7)}` },
-      { min: maxNumericValue * 0.7, max: maxNumericValue, color: generateColor(maxNumericValue * 0.85, maxNumericValue), label: `${Math.round(maxNumericValue * 0.7)}-${maxNumericValue}` }
-    ];
-
-    return ranges;
-  };
-
-  const colorScaleRanges = generateColorScaleLegend();
-  const legendGradientStops =
-    colorScaleRanges.length > 1
-      ? colorScaleRanges
-          .map((range, index) => {
-            const position =
-              colorScaleRanges.length === 1
-                ? 0
-                : (index / (colorScaleRanges.length - 1)) * 100;
-            return `${range.color} ${position}%`;
-          })
-          .join(', ')
-      : `${colorScaleRanges[0]?.color ?? '#e5e7eb'} 0%`;
-  const legendTickPositions = colorScaleRanges.map((range, index) => ({
-    label: range.label,
-    position:
-      colorScaleRanges.length === 1
-        ? 0
-        : (index / (colorScaleRanges.length - 1)) * 100
-  }));
-
-  // Load and render map with D3
-  useEffect(() => {
-    const loadMap = async () => {
-      try {
-        // Load the official India map with all 36 states/UTs (including Ladakh and Telangana)
-        const geoData = await d3.json('/india-govt-map.geojson') as any;
-        
-        if (!geoData || !geoData.features) {
-          console.error('Failed to load map data');
-          return;
-        }
-
-        console.log('India map loaded:', geoData.features.length, 'regions');
-
-        if (!svgRef.current) return;
-
-        const svg = d3.select(svgRef.current);
-        svg.selectAll('*').remove();
-
-        const width = viewBoxWidth;
-        const height = viewBoxHeight;
-
-        svg.attr('viewBox', `0 0 ${width} ${height}`);
-
-        // Add title box at the top-right
-        const titleGroup = svg.append('g')
-          .attr('class', 'map-title-group');
-
-        const titleTextSelection = titleGroup.append('text')
-          .attr('class', 'map-title-text')
-          .attr('data-export-role', 'map-title-text')
-          .attr('fill', '#1f2937')
-          .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
-          .attr('font-weight', '700')
-          .style('letter-spacing', '0.35px')
-          .style('pointer-events', 'none');
-
-        const titleMetrics = wrapTitleText(titleTextSelection, mapTitle);
-
-        const mapTopMargin = computeMapTopMargin(titleMetrics.height);
-        mapTopMarginRef.current = mapTopMargin;
-        mapTranslateRef.current = 0;
-
-        const projection = d3.geoMercator()
-          .fitExtent([[margins.left, mapTopMargin], [width - margins.right, height - mapBottomMargin]], geoData);
-
-        const path = d3.geoPath().projection(projection);
-
-        const mapBounds = path.bounds(geoData);
-        mapBoundsRef.current = mapBounds;
-        const [, minY] = mapBounds[0];
-        const [maxX] = mapBounds[1];
-
-        const anchorX = clamp(
-          maxX - titleMetrics.width - titleAnchorOffset.x,
-          margins.left,
-          width - titleMetrics.width - margins.right
-        );
-        const desiredAnchorY = minY - titleMetrics.height - titleAnchorOffset.y;
-        const anchorY = clamp(
-          desiredAnchorY,
-          TITLE_BOX_MARGIN_TOP,
-          height - mapBottomMargin - titleMetrics.height
-        );
-
-        titleGroup.attr('transform', `translate(${anchorX}, ${anchorY})`);
-
-        titleGroup.insert('rect', ':first-child')
-          .attr('class', 'map-title-box')
-          .attr('data-export-role', 'map-title-box')
-          .attr('width', titleMetrics.width)
-          .attr('height', titleMetrics.height)
-          .attr('fill', 'transparent')
-          .attr('pointer-events', 'none');
-
-        const g = svg.append('g')
-          .attr('class', 'map-geo')
-          .attr('transform', 'translate(0, 0)');
-
-        const labelMetadata: LabelMeta[] = geoData.features.map((feature: any) => {
-          const stateName = getFeatureStateName(feature);
-          const centroidRaw = path.centroid(feature as any) as [number, number];
-          const centroid: [number, number] =
-            centroidRaw && Number.isFinite(centroidRaw[0]) && Number.isFinite(centroidRaw[1])
-              ? centroidRaw
-              : [0, 0];
-          const config = STATE_LABEL_OFFSETS[stateName];
-          const labelX = centroid[0] + (config?.x ?? 0);
-          const labelY = centroid[1] + (config?.y ?? 0);
-          const fontSize = config?.fontSize ?? getLabelFontSize(stateName);
-          const labelHalfWidth = (stateName.length * fontSize * 0.6) / 2;
-          const labelHalfHeight = fontSize / 2;
-          const autoConnectorOffset = computeAutoConnectorOffset(
-            labelX,
-            labelY,
-            centroid,
-            labelHalfWidth,
-            labelHalfHeight
-          );
-
-          let hasConnector = false;
-          let connectorOffset = { x: 0, y: 0 };
-
-          if (config) {
-            if (config.connectorOffset === null) {
-              hasConnector = false;
-            } else {
-              hasConnector = true;
-              const manual = config.connectorOffset;
-              connectorOffset = manual
-                ? {
-                    x: autoConnectorOffset.x + manual.x,
-                    y: autoConnectorOffset.y + manual.y
-                  }
-                : autoConnectorOffset;
-            }
-          }
-
-          return {
-            stateName,
-            centroid,
-            labelPosition: { x: labelX, y: labelY },
-            anchor: config?.anchor ?? 'middle',
-            fontSize,
-            labelHalfWidth,
-            labelHalfHeight,
-            connectorOffset,
-            hasConnector
-          };
-        });
-        labelMetaRef.current = labelMetadata;
-
-        const tooltip = d3.select('body')
-          .append('div')
-          .attr('class', 'map-tooltip')
-          .style('position', 'absolute')
-          .style('visibility', 'hidden')
-          .style('background-color', 'rgba(0, 0, 0, 0.95)')
-          .style('color', 'white')
-          .style('padding', '12px 16px')
-          .style('border-radius', '8px')
-          .style('font-size', '14px')
-          .style('pointer-events', 'none')
-          .style('z-index', '9999')
-          .style('box-shadow', '0 8px 24px rgba(0,0,0,0.5)')
-          .style('font-family', 'system-ui, -apple-system, sans-serif')
-          .style('line-height', '1.5');
-
-        const currentMapData = mapData;
-        const mapDataLookup = new Map(currentMapData.map(item => [item.state, item]));
-
-        // Draw state/UT boundaries
-        const paths = g.selectAll<SVGPathElement, any>('.state')
-          .data(geoData.features)
-          .enter()
-          .append('path')
-          .attr('d', path as any)
-          .attr('fill', (d: any) => {
-            const geoName = d.properties?.ST_NM || d.properties?.NAME_1 || d.properties?.name || '';
-            const stateName = NAME_MAPPING[geoName] || geoName;
-            const stateData = currentMapData.find(s => s.state === stateName);
-            return stateData ? getStateFillColor(stateData) : '#e5e7eb';
-          })
-          .attr('stroke', '#fff')
-          .attr('stroke-width', 2)
-          .attr('class', 'state')
-          .attr('data-export-role', 'state-path')
-          .style('cursor', 'pointer')
-          .style('transition', 'all 0.3s ease');
-
-        // Connectors for compact states
-        g.selectAll<SVGLineElement, LabelMeta>('.state-label-connector')
-          .data(labelMetadata.filter(meta => meta.hasConnector))
-          .enter()
-          .append('line')
-          .attr('class', 'state-label-connector')
-          .attr('data-export-role', 'state-connector')
-          .attr('x1', d => d.labelPosition.x + d.connectorOffset.x)
-          .attr('y1', d => d.labelPosition.y + d.connectorOffset.y)
-          .attr('x2', d => d.centroid[0])
-          .attr('y2', d => d.centroid[1])
-          .style('stroke', '#6b7280')
-          .style('stroke-width', '1.5px')
-          .style('stroke-dasharray', '4,4')
-          .style('pointer-events', 'none');
-
-        // Add grouped labels for state names and values
-        const labelGroups = g.selectAll<SVGGElement, LabelMeta>('.state-label-group')
-          .data(labelMetadata)
-          .enter()
-          .append('g')
-          .attr('class', 'state-label-group')
-          .attr('transform', d => `translate(${d.labelPosition.x}, ${d.labelPosition.y})`);
-
-        labelGroups.append('text')
-          .attr('class', 'state-label-name state-label')
-          .attr('data-export-role', 'state-label-name')
-          .attr('text-anchor', d => d.anchor)
-          .attr('dominant-baseline', 'middle')
-          .style('pointer-events', 'none')
-          .style('font-size', d => `${d.fontSize}px`)
-          .style('font-weight', '700')
-          .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
-          .style('fill', '#1f2937')
-          .style('stroke', '#ffffff')
-          .style('stroke-width', '4px')
-          .style('paint-order', 'stroke fill')
-          .style('letter-spacing', '0.5px')
-          .attr('y', d => -(Math.max(d.fontSize * 0.35, 4)))
-          .text(d => d.stateName);
-
-        labelGroups.append('text')
-          .attr('class', 'state-label-value')
-          .attr('data-export-role', 'state-label-value')
-          .attr('text-anchor', d => d.anchor)
-          .attr('dominant-baseline', 'hanging')
-          .style('pointer-events', 'none')
-          .style('font-size', d => {
-            const entry = mapDataLookup.get(d.stateName);
-            return `${getValueFontSize(d, entry)}px`;
-          })
-          .style('font-weight', '600')
-          .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
-          .style('fill', '#1f2937')
-          .style('stroke', '#ffffff')
-          .style('stroke-width', '3px')
-          .style('paint-order', 'stroke fill')
-          .style('letter-spacing', '0.3px')
-          .attr('y', d => getValueLineOffset(d))
-          .text(d => {
-            const entry = mapDataLookup.get(d.stateName);
-            if (!entry) {
-              return '';
-            }
-            if (entry.numericValue !== null && Number.isFinite(entry.numericValue)) {
-              return entry.numericValue.toLocaleString();
-            }
-            return entry.rawValue.trim();
-          });
-
-        paths
-
-        // Add data source footer at the bottom
-        if (dataSource && dataSource.trim()) {
-          svg.append('text')
-            .attr('class', 'map-source')
-            .attr('data-export-role', 'map-source')
-            .attr('x', width / 2)
-            .attr('y', height - 20)
-            .attr('text-anchor', 'middle')
-            .attr('font-size', '14px')
-            .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
-            .attr('fill', '#6b7280')
-            .text(`Source: ${dataSource}`);
-        }
-
-        setMapLoaded(true);
-
-        return () => {
-          tooltip.remove();
-        };
-      } catch (error) {
-        console.error('Error loading map:', error);
-      }
-    };
-
-    loadMap();
-  }, [
-    layoutId,
-    paddingPreset,
-    margins.left,
-    margins.right,
-    margins.top,
-    margins.bottom,
-    titleAnchorOffset.x,
-    titleAnchorOffset.y,
-    viewBoxWidth,
-    viewBoxHeight
-  ]);
-
-  // Update colors and labels when data or color scheme changes
-  useEffect(() => {
-    if (!mapLoaded || !svgRef.current) return;
-
-    const svg = d3.select(svgRef.current);
-    const currentMapData = mapData;
-    const mapDataLookup = new Map(currentMapData.map(item => [item.state, item]));
-
-    const titleGroup = svg.select<SVGGElement>('.map-title-group');
-    const titleTextSelection = titleGroup.select<SVGTextElement>('.map-title-text');
-    if (!titleTextSelection.empty()) {
-      const titleMetrics = wrapTitleText(titleTextSelection, mapTitle);
-
-      const mapBounds = mapBoundsRef.current;
-      if (mapBounds) {
-        const [, minY] = mapBounds[0];
-        const [maxX] = mapBounds[1];
-        const anchorX = clamp(
-          maxX - titleMetrics.width - titleAnchorOffset.x,
-          margins.left,
-          viewBoxWidth - titleMetrics.width - margins.right
-        );
-        const desiredAnchorY = minY - titleMetrics.height - titleAnchorOffset.y;
-        const anchorY = clamp(
-          desiredAnchorY,
-          TITLE_BOX_MARGIN_TOP,
-          viewBoxHeight - mapBottomMargin - titleMetrics.height
-        );
-
-        titleGroup.attr(
-          'transform',
-          `translate(${anchorX}, ${anchorY})`
-        );
-      }
-
-      titleGroup.select<SVGRectElement>('.map-title-box')
-        .attr('width', titleMetrics.width)
-        .attr('height', titleMetrics.height);
-
-      const previousTopMargin = mapTopMarginRef.current;
-      const nextTopMargin = computeMapTopMargin(titleMetrics.height);
-      if (Math.abs(nextTopMargin - previousTopMargin) > 0.5) {
-        mapTopMarginRef.current = nextTopMargin;
-        mapTranslateRef.current += nextTopMargin - previousTopMargin;
-        svg.select<SVGGElement>('.map-geo')
-          .attr('transform', `translate(0, ${mapTranslateRef.current})`);
-      }
-    }
-
-    // Update or create source
-    const existingSource = svg.select('.map-source');
-    if (dataSource && dataSource.trim()) {
-      if (existingSource.empty()) {
-        svg.append('text')
-          .attr('class', 'map-source')
-          .attr('data-export-role', 'map-source')
-          .attr('x', viewBoxWidth / 2)
-          .attr('y', viewBoxHeight - 20)
-          .attr('text-anchor', 'middle')
-          .attr('font-size', '14px')
-          .attr('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
-          .attr('fill', '#6b7280')
-          .text(`Source: ${dataSource}`);
-      } else {
-        existingSource
-          .attr('x', viewBoxWidth / 2)
-          .attr('y', viewBoxHeight - 20)
-          .text(`Source: ${dataSource}`);
-      }
-    } else {
-      existingSource.remove();
-    }
-
-    svg.selectAll<SVGGElement, LabelMeta>('.state-label-group')
-      .attr('transform', d => `translate(${d.labelPosition.x}, ${d.labelPosition.y})`);
-
-    // Update state colors
-    svg.selectAll<SVGPathElement, any>('.state')
-      .attr('fill', function(d: any) {
-        const geoName = d.properties?.ST_NM || d.properties?.NAME_1 || d.properties?.name || '';
-        const stateName = NAME_MAPPING[geoName] || geoName;
-        const stateData = currentMapData.find(s => s.state === stateName);
-        return stateData ? getStateFillColor(stateData) : '#e5e7eb';
-      })
-      // Update tooltip handlers to use current data
-      .on('mouseover', function(this: SVGPathElement, _: MouseEvent, d: any) {
-        d3.select(this)
-          .attr('stroke-width', 4)
-          .attr('stroke', '#1f2937')
-          .style('filter', 'brightness(1.15)');
-
-        const geoName = d.properties?.ST_NM || d.properties?.NAME_1 || d.properties?.name || '';
-        const stateName = NAME_MAPPING[geoName] || geoName;
-        const stateData = currentMapData.find(s => s.state === stateName);
-        const info = STATE_INFO[stateName];
-
-        const tooltip = d3.select('.map-tooltip');
-        const isNumeric = stateData && stateData.numericValue !== null && Number.isFinite(stateData.numericValue);
-        const valueLabel = isNumeric ? 'Value' : 'Category';
-        const displayValue = stateData
-          ? isNumeric
-            ? stateData.numericValue!.toLocaleString()
-            : (stateData.rawValue.trim() || '—')
-          : '—';
-        const safeStateName = escapeHtml(stateName);
-        const safeDisplayValue = escapeHtml(displayValue);
-        const safeCapital = info ? escapeHtml(info.capital) : '';
-        const safeRegion = info ? escapeHtml(info.region) : '';
-
-        tooltip
-          .style('visibility', 'visible')
-          .html(`
-            <div style="font-weight: 600; font-size: 15px; margin-bottom: 8px; color: #60a5fa;">
-              ${safeStateName}
-            </div>
-            <div style="opacity: 0.95; font-size: 13px;">
-              <div style="margin: 4px 0;">
-                <span style="font-weight: 500; color: #93c5fd;">${valueLabel}:</span>
-                <span style="font-weight: 600; margin-left: 8px;">${safeDisplayValue}</span>
-              </div>
-              ${info ? `
-                <div style="margin: 4px 0;">
-                  <span style="font-weight: 500; color: #93c5fd;">Capital:</span>
-                  <span style="margin-left: 8px;">${safeCapital}</span>
-                </div>
-                <div style="margin: 4px 0;">
-                  <span style="font-weight: 500; color: #93c5fd;">Region:</span>
-                  <span style="margin-left: 8px;">${safeRegion}</span>
-                </div>
-              ` : ''}
-            </div>
-          `);
-      })
-      .on('mousemove', function(event: MouseEvent) {
-        const tooltip = d3.select('.map-tooltip');
-        const tooltipNode = tooltip.node() as HTMLElement;
-        const tooltipHeight = tooltipNode?.offsetHeight || 0;
-        tooltip
-          .style('top', (event.pageY - 10 - tooltipHeight) + 'px')
-          .style('left', (event.pageX + 15) + 'px');
-      })
-      .on('mouseout', function(this: SVGPathElement) {
-        d3.select(this)
-          .attr('stroke-width', 2)
-          .attr('stroke', '#fff')
-          .style('filter', 'brightness(1)');
-        d3.select('.map-tooltip').style('visibility', 'hidden');
-      });
-
-    // Update state value labels
-    svg.selectAll<SVGTextElement, LabelMeta>('.state-label')
-      .attr('text-anchor', d => d.anchor)
-      .attr('y', d => -(Math.max(d.fontSize * 0.35, 4)))
-      .style('font-size', d => `${d.fontSize}px`)
-      .style('font-weight', '700')
-      .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
-      .style('stroke', '#ffffff')
-      .style('stroke-width', '4px')
-      .style('paint-order', 'stroke fill')
-      .style('letter-spacing', '0.5px')
-      .text(d => d.stateName);
-
-    svg.selectAll<SVGTextElement, LabelMeta>('.state-label-value')
-      .attr('text-anchor', d => d.anchor)
-      .attr('y', d => getValueLineOffset(d))
-      .style('font-size', d => {
-        const entry = mapDataLookup.get(d.stateName);
-        return `${getValueFontSize(d, entry)}px`;
-      })
-      .style('font-weight', '600')
-      .style('font-family', 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif')
-      .style('stroke', '#ffffff')
-      .style('stroke-width', '3px')
-      .style('paint-order', 'stroke fill')
-      .text(d => {
-        const entry = mapDataLookup.get(d.stateName);
-        if (!entry) {
-          return '';
-        }
-        if (entry.numericValue !== null && Number.isFinite(entry.numericValue)) {
-          return entry.numericValue.toLocaleString();
-        }
-        return entry.rawValue.trim();
-      });
-
-    svg.selectAll<SVGLineElement, LabelMeta>('.state-label-connector')
-      .attr('x1', d => d.labelPosition.x + d.connectorOffset.x)
-      .attr('y1', d => d.labelPosition.y + d.connectorOffset.y)
-      .attr('x2', d => d.centroid[0])
-      .attr('y2', d => d.centroid[1]);
-  }, [
+  const { svgRef, mapLoaded } = useIndiaMapRenderer({
     mapData,
-    maxNumericValue,
-    mapLoaded,
-    colorScheme,
     mapTitle,
     dataSource,
-    categoryColorLookup,
     layoutId,
     paddingPreset,
-    margins.left,
-    margins.right,
-    margins.top,
-    margins.bottom,
-    titleAnchorOffset.x,
-    titleAnchorOffset.y,
-    viewBoxWidth,
-    viewBoxHeight
-  ]);
+    colorScheme,
+    getStateFillColor
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50">
-      {/* Hero */}
       <div className="border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
@@ -1409,47 +259,8 @@ const IndiaMapPageClean = () => {
               <p className="mt-3 text-base text-gray-600 dark:text-gray-300 sm:text-lg">
                 Colour every state and union territory with precision palettes, auto-aligned labels, and 2K–8K exports optimised for slides, dashboards, and print.
               </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button
-                  onClick={generateRandomData}
-                  className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-600/20 transition hover:bg-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500"
-                >
-                  Random data
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200 dark:hover:border-blue-400"
-                >
-                  <FiRotateCcw className="h-4 w-4" />
-                  Reset map
-                </button>
-                <button
-                  onClick={() => setShowExportDialog(true)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200 dark:hover:border-blue-400"
-                >
-                  <FiDownload className="h-4 w-4" />
-                  Export settings
-                </button>
-              </div>
             </div>
-
-            <div className="flex flex-wrap items-center gap-3 justify-start lg:justify-end">
-              <button
-                onClick={handleSave}
-                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-green-600/20 transition hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
-              >
-                <FiSave className="h-4 w-4" />
-                Save to browser
-              </button>
-              <button
-                onClick={() => setShowExportDialog(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-              >
-                <FiDownload className="h-4 w-4" />
-                Export map
-              </button>
-            </div>
+            <div />
           </div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1496,435 +307,102 @@ const IndiaMapPageClean = () => {
         </div>
       </div>
 
-      {/* Export Dialog */}
-      {showExportDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
-          onClick={() => setShowExportDialog(false)}
-        >
-          <div
-            className="w-full max-w-lg overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-800 dark:bg-gray-900/60">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Export map</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Choose the resolution that matches your presentation or print needs.</p>
-              </div>
-              <button
-                onClick={() => setShowExportDialog(false)}
-                className="rounded-full p-2 text-gray-500 transition hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-              >
-                <span className="sr-only">Close export dialog</span>
-                ×
-              </button>
-            </div>
-            <div className="space-y-3 px-6 py-6">
-              {(Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[]).map((preset) => {
-                const buttonStyle = resolutionButtonStyles[preset];
-                const { width: presetWidth, height: presetHeight } = getResolutionDimensions(preset);
-                const info = RESOLUTION_PRESETS[preset];
-                return (
-                  <button
-                    key={preset}
-                    onClick={() => handleExport(preset)}
-                    className={`w-full rounded-xl px-4 py-4 text-left text-white shadow-lg transition ${buttonStyle.base}`}
-                  >
-                    <div className="text-base font-semibold">
-                      {info.label} Quality
-                    </div>
-                    <div className={`text-xs ${buttonStyle.text}`}>
-                      {`${presetWidth} × ${presetHeight}`} • {info.description}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        onExport={handleExport}
+        resolutionButtonStyles={RESOLUTION_BUTTON_STYLES}
+        getResolutionDimensions={getResolutionDimensions}
+        RESOLUTION_PRESETS={RESOLUTION_PRESETS}
+      />
 
-      {/* Workspace */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
+        <ActionBar
+          onRandom={generateRandomData}
+          onReset={handleReset}
+          onSave={handleSave}
+          onExport={() => setShowExportDialog(true)}
+        />
+
         <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-          <div className="space-y-6">
+          <div className="space-y-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Design controls</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Arrange title, padding, and palette before editing values.
+                </p>
+              </div>
+            </div>
+
             <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Map information</h3>
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Add the title and source that accompany your export.
-                  </p>
+              <MapInfoPanel
+                mapTitle={mapTitle}
+                dataSource={dataSource}
+                onTitleChange={setMapTitle}
+                onSourceChange={setDataSource}
+              />
 
-                  <div className="mt-5 space-y-4">
-                    <div>
-                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        Map title
-                      </label>
-                      <input
-                        type="text"
-                        value={mapTitle}
-                        onChange={(e) => setMapTitle(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/40 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                        placeholder="e.g., GDP by State 2024"
-                      />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Displayed above the map preview and export.</p>
-                    </div>
+              <PalettePanel colorScheme={colorScheme} onChange={setColorScheme} />
+            </div>
 
-                    <div>
-                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        Data source
-                      </label>
-                      <input
-                        type="text"
-                        value={dataSource}
-                        onChange={(e) => setDataSource(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/40 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                        placeholder="e.g., World Bank, 2024 or https://data.gov.in"
-                      />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Appears below the legend for attribution.</p>
-                    </div>
-                  </div>
+            <div className="space-y-3">
+              <LayoutPaddingPanel
+                layoutId={layoutId}
+                layoutOptions={layoutOptions}
+                onLayoutChange={setLayoutId}
+                paddingPreset={paddingPreset}
+                paddingOptions={paddingOptions}
+                onPaddingChange={setPaddingPreset}
+              />
+
+              <div className="flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+                <div className="rounded-xl bg-blue-100 p-2.5 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
+                  <FiInfo className="h-4 w-4" />
                 </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-indigo-100 p-3 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
-                      <FiMaximize2 className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Canvas layout</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Switch aspect ratio and padding presets.</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    <div className="flex flex-wrap gap-2">
-                      {layoutOptions.map(option => {
-                        const descriptionParts = option.description.split('•').map(part => part.trim());
-                        const primaryLine = descriptionParts[0] ?? option.description;
-                        const secondaryLine = descriptionParts.slice(1).join(' • ');
-                        return (
-                          <button
-                            key={option.id}
-                            onClick={() => setLayoutId(option.id)}
-                            className={`min-w-[150px] flex-1 rounded-xl border px-4 py-3 text-left transition ${
-                              layoutId === option.id
-                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 ring-2 ring-indigo-400 dark:border-indigo-400'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-indigo-400'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                              <span>{option.label}</span>
-                              <span>{option.aspectLabel}</span>
-                            </div>
-                            <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-                              {primaryLine}
-                            </div>
-                            {secondaryLine && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {secondaryLine}
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-amber-100 p-3 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
-                          <FiBox className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Map padding</h4>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Control whitespace around the geography.</p>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {paddingOptions.map(([id, option]) => (
-                          <button
-                            key={id}
-                            onClick={() => setPaddingPreset(id)}
-                            className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
-                              paddingPreset === id
-                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 ring-2 ring-amber-400 dark:border-amber-400'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-amber-400'
-                            }`}
-                          >
-                            <div className="font-semibold text-gray-900 dark:text-white">{option.label}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{option.description}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-blue-100 p-3 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
-                      <FiInfo className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-semibold text-gray-900 dark:text-white">Coverage</h2>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">28 states + 8 union territories (2024)</p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                    Input a number or category for each region. Leave blank to show a neutral colour.
+                <div className="space-y-1">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">Coverage</div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    28 states + 8 union territories (2024). Enter a number or category; blank fields stay neutral.
                   </p>
                 </div>
               </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Colour scheme</h3>
-                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Choose a palette that fits your story. Switch anytime.</p>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  {/* colour buttons retained */}
-                  <button
-                    onClick={() => setColorScheme('sequential')}
-                    className={`rounded-lg border p-3 text-left transition ${
-                      colorScheme === 'sequential'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded bg-gradient-to-r from-blue-200 to-blue-600" />
-                      <div>
-                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Blue</div>
-                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Sequential</div>
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setColorScheme('diverging')}
-                    className={`rounded-lg border p-3 text-left transition ${
-                      colorScheme === 'diverging'
-                        ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/20 ring-2 ring-pink-500'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-pink-400'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded bg-gradient-to-r from-red-400 via-purple-300 to-blue-500" />
-                      <div>
-                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Diverging</div>
-                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Red ↔ Blue</div>
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setColorScheme('viridis')}
-                    className={`rounded-lg border p-3 text-left transition ${
-                      colorScheme === 'viridis'
-                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-green-400'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded bg-gradient-to-r from-purple-800 via-teal-500 to-yellow-400" />
-                      <div>
-                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Viridis</div>
-                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Scientific</div>
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setColorScheme('plasma')}
-                    className={`rounded-lg border p-3 text-left transition ${
-                      colorScheme === 'plasma'
-                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-500'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-purple-400'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded bg-gradient-to-r from-purple-900 via-pink-500 to-yellow-300" />
-                      <div>
-                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Plasma</div>
-                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">ML/AI</div>
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setColorScheme('turbo')}
-                    className={`rounded-lg border p-3 text-left transition ${
-                      colorScheme === 'turbo'
-                        ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20 ring-2 ring-cyan-500'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-cyan-400'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded bg-gradient-to-r from-blue-900 via-green-400 via-yellow-300 to-red-500" />
-                      <div>
-                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Turbo</div>
-                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Rainbow</div>
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setColorScheme('grayscale')}
-                    className={`rounded-lg border p-3 text-left transition ${
-                      colorScheme === 'grayscale'
-                        ? 'border-gray-500 bg-gray-50 dark:bg-gray-900/20 ring-2 ring-gray-500'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded bg-gradient-to-r from-black to-white" />
-                      <div>
-                        <div className="text-xs font-semibold text-gray-900 dark:text-white">Grayscale</div>
-                        <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Print</div>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">State values</h3>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Scroll through the list and update values inline.</p>
-              <div className="mt-4 max-h-96 space-y-2 overflow-y-auto pr-2">
-                {mapData.map((stateData) => {
-                  const info = STATE_INFO[stateData.state];
-                  const color = getStateFillColor(stateData);
-
-                  return (
-                    <div
-                      key={stateData.state}
-                      className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"
-                    >
-                      <div className="mb-2 flex items-center gap-2">
-                        <div
-                          className="h-5 w-5 rounded border border-white/20"
-                          style={{ backgroundColor: color }}
-                        />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{stateData.state}</div>
-                          {info && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {info.capital} • {info.region}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <input
-                        type="text"
-                        value={stateData.rawValue}
-                        onChange={(e) => handleValueChange(stateData.state, e.target.value)}
-                        className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
-                        placeholder="Value or category"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-900">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Live preview</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Full SVG render with zoom-friendly detail.</p>
-            </div>
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-blue-500 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-500/10"
-            >
-              <FiDownload className="h-4 w-4" />
-              Export options
-            </button>
-          </div>
-
-          <div ref={mapContainerRef} className="relative mt-5 flex min-h-[620px] items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-950">
-            {!mapLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                Loading map…
-              </div>
-            )}
-            <svg
-              ref={svgRef}
-              className="w-full max-w-4xl"
-              xmlns="http://www.w3.org/2000/svg"
+            <ValueTable
+              mapData={mapData}
+              stateInfo={STATE_INFO}
+              getStateFillColor={getStateFillColor}
+              onValueChange={handleValueChange}
             />
           </div>
-
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
-            {hasNumericValues ? (
-              <>
-                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <span>Low</span>
-                  <span>High</span>
-                </div>
-                <div
-                  className="relative mt-4 h-4 rounded-full shadow-inner"
-                  style={{ background: `linear-gradient(90deg, ${legendGradientStops})` }}
-                >
-                  {legendTickPositions.map((tick, index) => (
-                    <div
-                      key={index}
-                      className="absolute top-full mt-2 -translate-x-1/2 whitespace-nowrap text-[10px] font-medium text-gray-600 dark:text-gray-400"
-                      style={{ left: `${tick.position}%` }}
-                    >
-                      {tick.label}
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Add numeric values to see a continuous legend.
-              </div>
-            )}
-
-            {hasCategoricalValues && (
-              <div className={`mt-${hasNumericValues ? '6' : '4'} space-y-3`}>
-                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Categories
-                </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {categoryLegendItems.map(item => (
-                    <div key={item.key} className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
-                      <span
-                        className="inline-block h-3 w-3 rounded-full border border-white/40 shadow"
-                        style={{ backgroundColor: categoryColorLookup.get(item.key) ?? '#9ca3af' }}
-                      />
-                      <span>{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className={`${hasNumericValues || hasCategoricalValues ? 'mt-6' : 'mt-4'} border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400`}>
-              {hasNumericValues ? (
-                <span>
-                  <span className="font-semibold">Max value:</span> {maxNumericValue.toLocaleString()}
-                </span>
-              ) : (
-                <span>
-                  <span className="font-semibold">Numeric data:</span> None yet
-                </span>
-              )}
-              {hasCategoricalValues && (
-                <span className="ml-2">
-                  • <span className="font-semibold">Categories:</span> {categoryLegendItems.length}
-                </span>
-              )}
-              {dataSource && (
-                <span className="ml-2">
-                  • <span className="font-semibold">Source:</span> {dataSource}
-                </span>
-              )}
-            </div>
-          </div>
         </section>
+
+        <MapPreviewSection
+          mapLoaded={mapLoaded}
+          svgRef={svgRef}
+        >
+          <button
+            onClick={() => setShowExportDialog(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-blue-500 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-500/10"
+          >
+            <FiDownload className="h-4 w-4" />
+            Export options
+          </button>
+        </MapPreviewSection>
+
+        <LegendPanel
+          hasNumericValues={hasNumericValues}
+          legendGradientStops={legendGradientStops}
+          legendTickPositions={legendTickPositions}
+          hasCategoricalValues={categoryLegendItems.length > 0}
+          categoryLegendItems={categoryLegendItems}
+          categoryColorLookup={categoryColorLookup}
+          maxNumericValue={maxNumericValue}
+          dataSource={dataSource}
+        />
       </div>
 
-      {/* Save Status */}
       {saveStatus && (
         <div className="fixed bottom-4 right-4 rounded-lg bg-green-100 p-4 text-green-800 shadow-xl dark:bg-green-900/90 dark:text-green-200">
           {saveStatus}
@@ -1932,6 +410,4 @@ const IndiaMapPageClean = () => {
       )}
     </div>
   );
-};
-
-export default IndiaMapPageClean;
+}

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiDatabase } from 'react-icons/fi';
+import { ChartRenderer } from '../../utils/chartRenderer';
+import type { GraphType } from '../../types';
 
 interface SampleData {
   id: string;
@@ -10,6 +12,7 @@ interface SampleData {
   datasets: Array<{ label: string; data: number[]; color: string }>;
   category: 'business' | 'analytics' | 'marketing' | 'finance' | 'health';
   chartTypes: string[];
+  chartType: GraphType;
 }
 
 interface SampleDataLibraryProps {
@@ -29,7 +32,8 @@ const SAMPLE_DATASETS: SampleData[] = [
       { label: 'Accessories', data: [50, 60, 70, 80, 90, 100, 95, 110, 120, 130, 140, 160], color: '#10b981' }
     ],
     category: 'business',
-    chartTypes: ['bar', 'line', 'area']
+    chartTypes: ['bar', 'line', 'area'],
+    chartType: 'bar'
   },
   {
     id: 'website-traffic',
@@ -41,7 +45,8 @@ const SAMPLE_DATASETS: SampleData[] = [
       { label: 'Page Views', data: [1200, 1350, 1280, 1580, 1520, 1850, 1780, 1920, 2100, 2050, 2300, 2200, 2400, 2350, 2500, 2680, 2600, 2800, 2750, 2900, 3100, 3050, 3200, 3350, 3300, 3450, 3600, 3580, 3700, 3850], color: '#f59e0b' }
     ],
     category: 'analytics',
-    chartTypes: ['line', 'area']
+    chartTypes: ['line', 'area'],
+    chartType: 'line'
   },
   {
     id: 'customer-satisfaction',
@@ -52,7 +57,8 @@ const SAMPLE_DATASETS: SampleData[] = [
       { label: 'Satisfaction Score', data: [4.2, 4.5, 4.0, 3.8, 4.3, 4.6], color: '#10b981' }
     ],
     category: 'business',
-    chartTypes: ['bar', 'radar']
+    chartTypes: ['bar', 'radar'],
+    chartType: 'bar'
   },
   {
     id: 'social-media',
@@ -64,7 +70,8 @@ const SAMPLE_DATASETS: SampleData[] = [
       { label: 'Growth %', data: [12, 8, 25, 15, 18, 32], color: '#3b82f6' }
     ],
     category: 'marketing',
-    chartTypes: ['bar', 'line']
+    chartTypes: ['bar', 'line'],
+    chartType: 'bar'
   },
   {
     id: 'revenue-breakdown',
@@ -77,7 +84,8 @@ const SAMPLE_DATASETS: SampleData[] = [
       { label: 'Q3', data: [1050, 750, 620, 360, 240], color: '#ec4899' }
     ],
     category: 'business',
-    chartTypes: ['bar', 'area']
+    chartTypes: ['bar', 'area'],
+    chartType: 'bar'
   },
   {
     id: 'expense-tracker',
@@ -92,7 +100,8 @@ const SAMPLE_DATASETS: SampleData[] = [
       { label: 'Others', data: [100, 120, 130, 110, 140, 170], color: '#8b5cf6' }
     ],
     category: 'finance',
-    chartTypes: ['pie', 'doughnut', 'bar']
+    chartTypes: ['pie', 'doughnut', 'bar'],
+    chartType: 'doughnut'
   },
   {
     id: 'health-metrics',
@@ -105,7 +114,8 @@ const SAMPLE_DATASETS: SampleData[] = [
       { label: 'Sleep (hrs)', data: [6, 6.5, 7, 7.5, 7, 7.5, 8, 7.5, 8, 8, 7.5, 8], color: '#8b5cf6' }
     ],
     category: 'health',
-    chartTypes: ['line', 'area']
+    chartTypes: ['line', 'area'],
+    chartType: 'line'
   },
   {
     id: 'product-sales',
@@ -116,7 +126,8 @@ const SAMPLE_DATASETS: SampleData[] = [
       { label: 'Sales ($1000s)', data: [45, 68, 32, 75, 58], color: '#3b82f6' }
     ],
     category: 'business',
-    chartTypes: ['pie', 'doughnut', 'bar']
+    chartTypes: ['pie', 'doughnut', 'bar'],
+    chartType: 'pie'
   }
 ];
 
@@ -205,6 +216,23 @@ export default function SampleDataLibrary({ onSelectSample, onClose }: SampleDat
                     <div className="font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded">
                       {sample.labels.length} labels, {sample.datasets.length} dataset{sample.datasets.length !== 1 ? 's' : ''}
                     </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 mb-3">
+                  <div className="h-36">
+                    <ChartRenderer
+                      data={{
+                        title: sample.title,
+                        labels: sample.labels,
+                        datasets: sample.datasets.map((d, i) => ({
+                          label: d.label || `Series ${i + 1}`,
+                          data: d.data.join(', '),
+                          color: d.color
+                        })),
+                        chartType: sample.chartType || 'bar'
+                      }}
+                    />
                   </div>
                 </div>
 

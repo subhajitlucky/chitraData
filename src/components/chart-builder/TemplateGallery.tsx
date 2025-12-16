@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiLayout } from 'react-icons/fi';
-import type { ChartTemplate } from '../utils/chartTemplates';
+import type { ChartTemplate } from '../../utils/chartTemplates';
+import { ChartRenderer } from '../../utils/chartRenderer';
 
 interface TemplateGalleryProps {
   templates: ChartTemplate[];
@@ -105,6 +106,23 @@ export default function TemplateGallery({
                   </div>
 
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{template.description}</p>
+
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 mb-4">
+                    <div className="h-32">
+                      <ChartRenderer
+                        data={{
+                          title: template.name,
+                          labels: template.config.labels,
+                          datasets: template.config.datasets.map((d, i) => ({
+                            label: d.label || `Series ${i + 1}`,
+                            data: d.data,
+                            color: d.color
+                          })),
+                          chartType: template.config.chartType
+                        }}
+                      />
+                    </div>
+                  </div>
 
                   <div className="mb-4">
                     <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Chart Types:</div>

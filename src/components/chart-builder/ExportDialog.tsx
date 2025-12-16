@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiDownload, FiImage, FiFileText, FiMaximize2 } from 'react-icons/fi';
-import { getPresetSizes } from '../utils/exportUtils';
+import { getPresetSizes } from '../../utils/exportUtils';
 
 interface ExportDialogProps {
   isOpen: boolean;
