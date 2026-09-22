@@ -8,7 +8,7 @@ export interface ChartData {
     title: string;
     labels: string[];
     datasets: ChartDataset[];
-    chartType: 'bar' | 'line' | 'pie' | 'area' | 'scatter' | 'doughnut';
+    chartType: 'bar' | 'line' | 'pie' | 'area' | 'doughnut';
 }
 
 export interface ChartProps {

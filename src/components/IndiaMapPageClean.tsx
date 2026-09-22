@@ -189,7 +189,7 @@ export default function IndiaMapPageClean() {
       savedMaps.push(newMap);
       localStorage.setItem('chitradata_maps', JSON.stringify(savedMaps));
       setSaveStatus('Map saved successfully!');
-    } catch (error) {
+    } catch {
       setSaveStatus('Failed to save map');
     }
     setTimeout(() => setSaveStatus(null), 3000);
@@ -228,7 +228,7 @@ export default function IndiaMapPageClean() {
       });
       setSaveStatus(`Map exported as ${label}!`);
       setShowExportDialog(false);
-    } catch (error) {
+    } catch {
       setSaveStatus('Export failed');
     }
     setTimeout(() => setSaveStatus(null), 3000);

@@ -1,7 +1,10 @@
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
+import type { ChartData as ChartJsData, ChartOptions } from 'chart.js';
 import type { GraphData } from '../../types';
-import { forwardRef } from 'react';
-import { COLOR_PALETTES } from '../../utils/colorPalettes';
+import { forwardRef, type ComponentProps } from 'react';
+import { getPieSliceColors } from '../../utils/pieColors';
+
+type PreviewChartType = 'bar' | 'line' | 'pie' | 'doughnut';
 
 interface ChartPreviewProps {
   data: GraphData;
@@ -24,8 +27,8 @@ export const ChartPreview = forwardRef<HTMLDivElement, ChartPreviewProps>(({ dat
   }
 
   // Prepare chart data based on type
-  let chartData: any;
-  let chartOptions: any = {
+  let chartData: ChartJsData<PreviewChartType, number[], string>;
+  let chartOptions: ChartOptions<PreviewChartType> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -60,15 +63,14 @@ export const ChartPreview = forwardRef<HTMLDivElement, ChartPreviewProps>(({ dat
         borderColor: '#d1d5db',
         borderWidth: 1,
         padding: 12,
-        borderRadius: 8,
+        cornerRadius: 8,
       }
     }
   };
 
   if (data.type === 'pie' || data.type === 'doughnut') {
     const firstDataset = data.datasets[0];
-    const palette = COLOR_PALETTES.find((p) => p.id === 'colorblind-safe') || COLOR_PALETTES[0];
-    const sliceColors = data.labels.map((_, i) => palette.colors[i % palette.colors.length]);
+    const sliceColors = getPieSliceColors(data.labels.length);
 
     chartData = {
       labels: data.labels,
@@ -141,17 +143,17 @@ export const ChartPreview = forwardRef<HTMLDivElement, ChartPreviewProps>(({ dat
 
     switch (data.type) {
       case 'bar':
-        return <Bar {...commonProps} />;
+        return <Bar {...(commonProps as ComponentProps<typeof Bar>)} />;
       case 'line':
-        return <Line {...commonProps} />;
+        return <Line {...(commonProps as ComponentProps<typeof Line>)} />;
       case 'area':
-        return <Line {...commonProps} />;
+        return <Line {...(commonProps as ComponentProps<typeof Line>)} />;
       case 'pie':
-        return <Pie {...commonProps} />;
+        return <Pie {...(commonProps as ComponentProps<typeof Pie>)} />;
       case 'doughnut':
-        return <Doughnut {...commonProps} />;
+        return <Doughnut {...(commonProps as ComponentProps<typeof Doughnut>)} />;
       default:
-        return <Bar {...commonProps} />;
+        return <Bar {...(commonProps as ComponentProps<typeof Bar>)} />;
     }
   };
 

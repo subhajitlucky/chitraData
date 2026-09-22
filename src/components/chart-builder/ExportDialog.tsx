@@ -1,31 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiDownload, FiImage, FiFileText, FiMaximize2 } from 'react-icons/fi';
-import { getPresetSizes } from '../../utils/exportUtils';
+import {
+  QUALITY_PRESETS,
+  SIZE_PRESETS,
+  resolveExportDimensions,
+  type ExportFormat,
+  type ExportQuality
+} from '../../utils/exportUtils';
 
 interface ExportDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onExport: (format: 'png' | 'pdf', quality: 'standard' | 'hd' | '2k' | '4k' | '8k', size: string) => void;
+  onExport: (format: ExportFormat, quality: ExportQuality, size: string) => void;
 }
 
-const QUALITY_PRESETS = {
-  standard: { name: 'Standard (1080p)', scale: 1, description: 'Good for web and social media' },
-  hd: { name: 'HD (1440p)', scale: 2, description: 'Better quality for presentations' },
-  '2k': { name: '2K QHD (1440p)', scale: 2, description: 'High quality for reports' },
-  '4k': { name: '4K UHD (2160p)', scale: 3, description: 'Ultra sharp - Perfect for printing' },
-  '8k': { name: '8K UHD (4320p)', scale: 4, description: 'Maximum quality - Professional use' }
-};
-
 export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialogProps) {
-  const [selectedFormat, setSelectedFormat] = useState<'png' | 'pdf'>('png');
-  const [selectedQuality, setSelectedQuality] = useState<keyof typeof QUALITY_PRESETS>('4k');
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('png');
+  const [selectedQuality, setSelectedQuality] = useState<ExportQuality>('4k');
   const [selectedSize, setSelectedSize] = useState('presentation');
   const [customWidth, setCustomWidth] = useState(1920);
   const [customHeight, setCustomHeight] = useState(1080);
   const [useCustomSize, setUseCustomSize] = useState(false);
 
-  const sizes = getPresetSizes();
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [isOpen, onClose]);
 
   const handleExport = () => {
     if (useCustomSize) {
@@ -38,6 +47,11 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
 
   if (!isOpen) return null;
 
+  const outputDimensions = resolveExportDimensions(
+    selectedQuality,
+    useCustomSize ? `${customWidth}x${customHeight}` : selectedSize
+  );
+
   return (
     <AnimatePresence>
       <motion.div
@@ -48,6 +62,9 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
         onClick={onClose}
       >
         <motion.div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="export-dialog-title"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
@@ -60,8 +77,10 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
                 <FiDownload size={24} />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Export Chart</h2>
-                <p className="text-gray-600 dark:text-gray-400">Choose quality, size, and format</p>
+                <h2 id="export-dialog-title" className="text-2xl font-bold text-gray-800 dark:text-white">
+                  Export Chart
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">Choose format, resolution, and aspect ratio</p>
               </div>
             </div>
           </div>
@@ -100,12 +119,12 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
 
             {/* Quality Selection */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Quality</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Resolution</h3>
               <div className="space-y-2">
                 {Object.entries(QUALITY_PRESETS).map(([key, quality]) => (
                   <button
                     key={key}
-                    onClick={() => setSelectedQuality(key as keyof typeof QUALITY_PRESETS)}
+                    onClick={() => setSelectedQuality(key as ExportQuality)}
                     className={`w-full p-3 rounded-lg border text-left transition-all ${
                       selectedQuality === key
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -118,7 +137,7 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
                         <div className="text-xs text-gray-600 dark:text-gray-400">{quality.description}</div>
                       </div>
                       <div className="text-xs font-mono text-gray-500 dark:text-gray-400">
-                        {quality.scale}x scale
+                        {quality.longEdge}px long edge
                       </div>
                     </div>
                   </button>
@@ -128,7 +147,7 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
 
             {/* Size Selection */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Size</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Aspect ratio</h3>
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -147,10 +166,14 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
                 {useCustomSize ? (
                   <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <label
+                        htmlFor="custom-width"
+                        className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+                      >
                         Width (px)
                       </label>
                       <input
+                        id="custom-width"
                         type="number"
                         value={customWidth}
                         onChange={(e) => setCustomWidth(parseInt(e.target.value) || 1920)}
@@ -158,10 +181,14 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <label
+                        htmlFor="custom-height"
+                        className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+                      >
                         Height (px)
                       </label>
                       <input
+                        id="custom-height"
                         type="number"
                         value={customHeight}
                         onChange={(e) => setCustomHeight(parseInt(e.target.value) || 1080)}
@@ -171,22 +198,27 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(sizes as any).map(([key, size]) => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedSize(key)}
-                        className={`p-3 rounded-lg border text-left transition-all ${
-                          selectedSize === key
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
-                        }`}
-                      >
-                        <div className="font-semibold text-gray-800 dark:text-white text-sm">{(size as any).name}</div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          {(size as any).width}×{(size as any).height}
-                        </div>
-                      </button>
-                    ))}
+                    {SIZE_PRESETS.map((size) => {
+                      const dimensions = resolveExportDimensions(selectedQuality, size.id);
+                      return (
+                        <button
+                          key={size.id}
+                          onClick={() => setSelectedSize(size.id)}
+                          className={`p-3 rounded-lg border text-left transition-all ${
+                            selectedSize === size.id
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
+                          }`}
+                        >
+                          <div className="font-semibold text-gray-800 dark:text-white text-sm">
+                            {size.name} · {size.ratioLabel}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            {dimensions.width}×{dimensions.height}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -196,21 +228,25 @@ export default function ExportDialog({ isOpen, onClose, onExport }: ExportDialog
             <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 rounded-lg border border-blue-200 dark:border-gray-600">
               <div className="flex items-center gap-2 mb-2">
                 <FiMaximize2 size={16} className="text-blue-600" />
-                <span className="font-semibold text-gray-800 dark:text-white">Export Summary</span>
+                <span className="font-semibold text-gray-800 dark:text-white">Export summary</span>
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                <div>Format: <span className="font-semibold text-gray-800 dark:text-white">{selectedFormat.toUpperCase()}</span></div>
                 <div>
-                  Quality: <span className="font-semibold text-gray-800 dark:text-white">
+                  Format:{' '}
+                  <span className="font-semibold text-gray-800 dark:text-white">
+                    {selectedFormat.toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  Resolution:{' '}
+                  <span className="font-semibold text-gray-800 dark:text-white">
                     {QUALITY_PRESETS[selectedQuality].name}
                   </span>
                 </div>
                 <div>
-                  Size: <span className="font-semibold text-gray-800 dark:text-white">
-                    {useCustomSize
-                      ? `${customWidth}×${customHeight}px`
-                      : `${(sizes as any)[selectedSize].width}×${(sizes as any)[selectedSize].height}px`
-                    }
+                  Output:{' '}
+                  <span className="font-semibold text-gray-800 dark:text-white">
+                    {outputDimensions.width}×{outputDimensions.height}px
                   </span>
                 </div>
               </div>

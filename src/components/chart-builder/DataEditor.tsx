@@ -87,15 +87,15 @@ const DataEditor = ({ labels, datasets, onChange }: DataEditorProps) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="min-w-0 space-y-6">
+      <div className="min-w-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">Data Editor</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">Edit your data directly in the table below</p>
         </div>
 
-        <div className="p-4 overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="min-w-0 p-4 overflow-x-auto">
+          <table className="w-full min-w-[560px] border-collapse">
             <thead>
               <tr>
                 <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[100px]">

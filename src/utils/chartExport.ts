@@ -1,48 +1,14 @@
 import { Chart as ChartJS, type ChartConfiguration, type ChartType } from 'chart.js';
 import type { GraphType } from '../types';
-import { getPresetSizes } from './exportUtils';
+import {
+  downloadCanvas,
+  resolveExportDimensions,
+  type ExportFormat,
+  type ExportQuality
+} from './exportUtils';
+import { getPieSliceColors } from './pieColors';
 
-type QualityPreset = 'standard' | 'hd' | '2k' | '4k' | '8k';
-
-const QUALITY_DIMENSIONS: Record<QualityPreset, { width: number; height: number }> = {
-  standard: { width: 1280, height: 720 },
-  hd: { width: 1920, height: 1080 },
-  '2k': { width: 2560, height: 1440 },
-  '4k': { width: 3840, height: 2160 },
-  '8k': { width: 7680, height: 4320 }
-};
-
-const parseSizeString = (size: string | null | undefined) => {
-  if (!size) return null;
-
-  if (size.includes('x')) {
-    const [w, h] = size.split('x').map((value) => parseInt(value.trim(), 10));
-    if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
-      return { width: w, height: h };
-    }
-  }
-
-  const preset = getPresetSizes()[size as keyof ReturnType<typeof getPresetSizes>];
-  if (preset) {
-    return { width: preset.width, height: preset.height };
-  }
-
-  return null;
-};
-
-const resolveDimensions = (
-  quality: QualityPreset,
-  size: string | null | undefined
-): { width: number; height: number } => {
-  const parsed = parseSizeString(size);
-  if (parsed) {
-    return parsed;
-  }
-
-  return QUALITY_DIMENSIONS[quality] ?? QUALITY_DIMENSIONS.hd;
-};
-
-const buildChartJsConfig = (
+export const buildChartJsConfig = (
   type: GraphType,
   labels: string[],
   datasets: Array<{ label: string; data: number[]; color: string }>,
@@ -89,7 +55,7 @@ const buildChartJsConfig = (
 
   if (type === 'pie' || type === 'doughnut') {
     const firstDataset = datasets[0];
-    const backgroundColours = labels.map((_, index) => datasets[index]?.color || '#3b82f6');
+    const backgroundColours = getPieSliceColors(labels.length);
 
     return {
       type,
@@ -136,8 +102,12 @@ const buildChartJsConfig = (
           datasetConfig.borderSkipped = false;
         }
 
-        return datasetConfig;
-      }) as any
+        return datasetConfig as unknown as ChartConfiguration<
+          ChartType,
+          number[],
+          string
+        >['data']['datasets'][number];
+      })
     },
     options: {
       ...baseOptions,
@@ -171,23 +141,19 @@ const buildChartJsConfig = (
   } as ChartConfiguration<ChartType, number[], string>;
 };
 
-export const exportChartConfigImage = async (
-  {
-    title,
-    labels,
-    datasets,
-    chartType
-  }: {
-    title: string;
-    labels: string[];
-    datasets: Array<{ label: string; data: number[]; color: string }>;
-    chartType: GraphType;
-  },
-  quality: QualityPreset,
-  size: string | null | undefined,
-  filename: string
-) => {
-  const { width, height } = resolveDimensions(quality, size);
+export interface ChartExportInput {
+  title: string;
+  labels: string[];
+  datasets: Array<{ label: string; data: number[]; color: string }>;
+  chartType: GraphType;
+}
+
+export const renderChartToCanvas = (
+  { title, labels, datasets, chartType }: ChartExportInput,
+  quality: ExportQuality,
+  size: string | null | undefined
+): HTMLCanvasElement => {
+  const { width, height } = resolveExportDimensions(quality, size);
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -201,7 +167,6 @@ export const exportChartConfigImage = async (
   const config = buildChartJsConfig(chartType, labels, datasets, title, scale);
 
   const chart = new ChartJS(context, config);
-
   chart.update();
 
   context.save();
@@ -210,12 +175,26 @@ export const exportChartConfigImage = async (
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.restore();
 
-  const dataUrl = canvas.toDataURL('image/png', 1);
   chart.destroy();
 
-  const link = document.createElement('a');
-  link.download = `${filename}.png`;
-  link.href = dataUrl;
-  link.click();
+  return canvas;
+};
+
+export const exportChartFile = async (
+  input: ChartExportInput,
+  {
+    format,
+    quality,
+    size,
+    filename
+  }: {
+    format: ExportFormat;
+    quality: ExportQuality;
+    size: string | null | undefined;
+    filename: string;
+  }
+) => {
+  const canvas = renderChartToCanvas(input, quality, size);
+  await downloadCanvas(canvas, filename, format);
 };
 

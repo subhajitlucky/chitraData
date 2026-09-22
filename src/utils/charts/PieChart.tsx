@@ -1,5 +1,6 @@
 import type { ChartProps } from './types';
 import { parseData } from './utils';
+import { getPieSliceColors } from '../pieColors';
 
 export const PieChart = ({ data }: ChartProps) => {
     const dataset = data.datasets[0];
@@ -10,6 +11,7 @@ export const PieChart = ({ data }: ChartProps) => {
 
     if (total === 0) return null;
 
+    const sliceColors = getPieSliceColors(parsedData.length);
     let startAngle = 0;
 
     return (
@@ -32,7 +34,7 @@ export const PieChart = ({ data }: ChartProps) => {
                         startAngle = endAngle;
 
                         return (
-                            <path key={index} d={pathData} fill={dataset.color} stroke="#ffffff" strokeWidth="1" />
+                            <path key={index} d={pathData} fill={sliceColors[index]} stroke="#ffffff" strokeWidth="1" />
                         );
                     })}
                     <circle cx="50" cy="50" r="15" fill="#ffffff" />
@@ -45,7 +47,7 @@ export const PieChart = ({ data }: ChartProps) => {
                     const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
                     return (
                         <div key={index} className="flex items-center">
-                            <div className="w-3 h-3 rounded-full mr-1" style={{ backgroundColor: dataset.color }} />
+                            <div className="w-3 h-3 rounded-full mr-1" style={{ backgroundColor: sliceColors[index] }} />
                             <span className="text-xs text-gray-600 dark:text-gray-300">
                                 {label}: {percentage}%
                             </span>

@@ -197,7 +197,7 @@ const LandingPage = () => {
               {
                 icon: FiZap,
                 title: 'Start fast',
-                copy: 'Load samples, pick a template, and see AI suggestions that fit your data.'
+                copy: 'Load samples, pick a template, and start from a readable default layout.'
               },
               {
                 icon: FiLayers,
@@ -317,13 +317,13 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-3xl border border-amber-200 bg-amber-50 p-7 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10">
               <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-200">
-                <FiShield className="h-4 w-4" /> Chart doctor & a11y guardrails
+                <FiShield className="h-4 w-4" /> Clarity guardrails
               </div>
-              <h3 className="mt-3 text-2xl font-semibold text-gray-900 dark:text-white">Clarity-first defaults</h3>
+              <h3 className="mt-3 text-2xl font-semibold text-gray-900 dark:text-white">Readable by default</h3>
               <ul className="mt-4 space-y-2 text-sm text-gray-700 dark:text-gray-200">
-                <li>• Detects dense labels, generic series names, and slice overload.</li>
-                <li>• Contrast checks + palette suggestions for accessibility.</li>
-                <li>• One-tap fixes; keeps undo/redo safe.</li>
+                <li>• Colorblind-safe slice colors for pie and doughnut charts.</li>
+                <li>• Templates handle label, legend, and grid placement.</li>
+                <li>• Undo and redo keep every experiment safe.</li>
               </ul>
             </div>
 
@@ -333,7 +333,7 @@ const LandingPage = () => {
               </div>
               <h3 className="mt-3 text-2xl font-semibold text-gray-900 dark:text-white">HD to 8K in one click</h3>
               <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                Pick aspect ratios, queue multiple exports, and keep charts presentation-ready for slides, docs, and dashboards.
+                Pick an aspect ratio, choose a resolution, and export charts that stay sharp on slides, docs, and dashboards.
               </p>
               <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-gray-500 dark:text-gray-400">
                 {['PNG & PDF', '16:9 • 4:3 • 1:1', 'HD • 2K • 4K • 8K'].map((item) => (

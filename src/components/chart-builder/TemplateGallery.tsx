@@ -19,9 +19,7 @@ const CATEGORIES = [
   { id: 'trend', label: 'Trends', icon: '📉' }
 ];
 
-const getChartIcon = (_type: string) => {
-  return FiLayout;
-};
+const getChartIcon = () => FiLayout;
 
 export default function TemplateGallery({
   templates,
@@ -128,7 +126,7 @@ export default function TemplateGallery({
                     <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Chart Types:</div>
                     <div className="flex gap-2 flex-wrap">
                       {template.recommendedTypes.map((type) => {
-                        const Icon = getChartIcon(type);
+                        const Icon = getChartIcon();
                         return (
                           <div
                             key={type}

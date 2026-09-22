@@ -39,8 +39,8 @@ export function BuilderTabs({
   onPaletteChange
 }: BuilderTabsProps) {
   return (
-    <section className="grid gap-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+    <section className="grid min-w-0 gap-6">
+      <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
         <div className="flex overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/70">
           {[{ id: 'data', label: 'Data', icon: FiDatabase }, { id: 'style', label: 'Style', icon: FiLayout }, { id: 'settings', label: 'Settings', icon: FiSettings }].map((tab) => {
             const Icon = tab.icon;
@@ -62,7 +62,7 @@ export function BuilderTabs({
             );
           })}
         </div>
-        <div className="p-5">
+        <div className="min-w-0 p-5">
           <AnimatePresence mode="wait">
             {activePanel === 'data' && (
               <motion.div

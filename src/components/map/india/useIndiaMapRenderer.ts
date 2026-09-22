@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import * as d3 from 'd3';
+import type { GeoPermissibleObjects } from 'd3-geo';
 import { DEFAULT_TITLE_HEIGHT } from './constants';
 import type { ColorScheme, LayoutId, PaddingPreset, StateData } from './types';
 import { useMapLayout } from './hooks/useMapLayout';
@@ -74,16 +75,14 @@ export const useIndiaMapRenderer = ({
     });
 
     // 2. Projection and Path
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const projection = d3.geoMercator()
       .fitExtent([
         [margins.left, mapTopMarginRef.current],
         [viewBoxWidth - margins.right, viewBoxHeight - margins.bottom]
-      ], geoJson as any);
+      ], geoJson as unknown as GeoPermissibleObjects);
 
     const path = d3.geoPath().projection(projection);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mapBoundsRef.current = path.bounds(geoJson as any);
+    mapBoundsRef.current = path.bounds(geoJson as unknown as GeoPermissibleObjects);
 
     // Re-draw Title with updated bounds
     drawTitle({

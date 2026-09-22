@@ -4,6 +4,7 @@ import type { GraphData } from '../../types';
 import { motion } from 'framer-motion';
 import { FiDownload, FiTrash2, FiBarChart2, FiArrowLeft } from 'react-icons/fi';
 import { ChartRenderer } from '../../utils/chartRenderer';
+import { exportChartFile } from '../../utils/chartExport';
 
 const GraphGallery = () => {
   const navigate = useNavigate();
@@ -42,24 +43,37 @@ const GraphGallery = () => {
     setTimeout(() => setDeleteStatus(null), 3000);
   };
 
-  const downloadGraph = () => {
-    setDeleteStatus({
-      type: 'info',
-      message: 'Graph download functionality would be implemented here!'
-    });
+  const downloadGraph = async (graph: GraphData) => {
+    try {
+      await exportChartFile(
+        {
+          title: graph.title,
+          labels: graph.labels,
+          datasets: graph.datasets.map((ds, i) => ({
+            label: ds.label || `Series ${i + 1}`,
+            data: ds.data,
+            color: (ds.color as string) || '#3b82f6'
+          })),
+          chartType: graph.type
+        },
+        {
+          format: 'png',
+          quality: '2k',
+          size: 'presentation',
+          filename: graph.title || 'chart'
+        }
+      );
+      setDeleteStatus({ type: 'success', message: 'Chart downloaded' });
+    } catch (error) {
+      console.error('Error exporting graph:', error);
+      setDeleteStatus({ type: 'error', message: 'Failed to download chart' });
+    }
+
     setTimeout(() => setDeleteStatus(null), 3000);
   };
 
   const renderChartPreview = (graph: GraphData) => {
     // Lightweight, dependency-free preview using the DOM renderer
-    const safeChartType = (graph.type === 'doughnut' ? 'doughnut' : graph.type) as
-      | 'bar'
-      | 'line'
-      | 'pie'
-      | 'area'
-      | 'doughnut'
-      | 'scatter';
-
     const rendererData = {
       title: graph.title,
       labels: graph.labels,
@@ -68,7 +82,7 @@ const GraphGallery = () => {
         data: ds.data.join(', '),
         color: (ds.color as string) || '#3b82f6'
       })),
-      chartType: safeChartType
+      chartType: graph.type
     };
 
     return (
@@ -101,6 +115,8 @@ const GraphGallery = () => {
 
       {deleteStatus && (
         <div
+          role="status"
+          aria-live="polite"
           className={`mb-4 p-3 rounded-lg ${
             deleteStatus.type === 'success'
               ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
@@ -158,9 +174,9 @@ const GraphGallery = () => {
                   </h3>
                   <div className="flex space-x-2">
                     <button
-                      onClick={downloadGraph}
+                      onClick={() => downloadGraph(graph)}
                       className="text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 p-1"
-                      aria-label="Download graph"
+                      aria-label={`Download ${graph.title}`}
                     >
                       <FiDownload />
                     </button>

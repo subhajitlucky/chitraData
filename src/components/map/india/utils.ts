@@ -45,7 +45,7 @@ export const parseNumericValue = (input: string): number | null => {
   const trimmed = input.trim();
   if (!trimmed) return null;
   const normalized = trimmed.replace(/,/g, '');
-  if (!/^[-+]?(\\d+\\.?\\d*|\\.\\d+)$/.test(normalized)) {
+  if (!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(normalized)) {
     return null;
   }
   const parsed = Number(normalized);

@@ -1,193 +1,100 @@
-import html2canvas from 'html2canvas';
+export type ExportQuality = 'standard' | 'hd' | '2k' | '4k' | '8k';
+export type ExportFormat = 'png' | 'pdf';
 
-export interface ExportOptions {
-  filename?: string;
-  scale?: number;
-  quality?: number;
-  backgroundColor?: string;
-  width?: number;
-  height?: number;
+export interface ExportDimensions {
+  width: number;
+  height: number;
 }
 
-export const exportAsPNG = async (
-  element: HTMLElement,
-  options: ExportOptions = {}
-): Promise<void> => {
-  const {
-    filename = 'chart',
-    scale = 3,
-    quality = 0.95,
-    backgroundColor = '#ffffff',
-    width,
-    height
-  } = options;
+export const QUALITY_PRESETS: Record<
+  ExportQuality,
+  { name: string; description: string; longEdge: number }
+> = {
+  standard: { name: 'Standard (720p)', description: 'Good for web and social media', longEdge: 1280 },
+  hd: { name: 'HD (1080p)', description: 'Better quality for presentations', longEdge: 1920 },
+  '2k': { name: '2K QHD (1440p)', description: 'High quality for reports', longEdge: 2560 },
+  '4k': { name: '4K UHD (2160p)', description: 'Ultra sharp, ideal for printing', longEdge: 3840 },
+  '8k': { name: '8K UHD (4320p)', description: 'Maximum quality for large formats', longEdge: 7680 }
+};
 
-  try {
-    // Store original dimensions
-    const originalWidth = element.style.width;
-    const originalHeight = element.style.height;
+export const SIZE_PRESETS = [
+  { id: 'presentation', name: 'Presentation', ratioLabel: '16:9', ratio: [16, 9] as const },
+  { id: 'social-square', name: 'Social square', ratioLabel: '1:1', ratio: [1, 1] as const },
+  { id: 'print-4-3', name: 'Print', ratioLabel: '4:3', ratio: [4, 3] as const },
+  { id: 'a4', name: 'A4 portrait', ratioLabel: '1:1.41', ratio: [1240, 1754] as const }
+];
 
-    // Apply custom size if provided
-    if (width && height) {
-      element.style.width = `${width}px`;
-      element.style.height = `${height}px`;
-    }
+const parseCustomSize = (size: string | null | undefined): ExportDimensions | null => {
+  if (!size) return null;
+  const match = size.match(/^(\d+)x(\d+)$/i);
+  if (!match) return null;
 
-    const canvas = await html2canvas(element, {
-      scale,
-      backgroundColor,
-      useCORS: true,
-      logging: false,
-      allowTaint: true,
-      width: width || undefined,
-      height: height || undefined
-    });
-
-    // Restore original dimensions
-    if (width && height) {
-      element.style.width = originalWidth;
-      element.style.height = originalHeight;
-    }
-
-    const link = document.createElement('a');
-    link.download = `${filename}.png`;
-    link.href = canvas.toDataURL('image/png', quality);
-    link.click();
-  } catch (error) {
-    console.error('Error exporting PNG:', error);
-    throw new Error('Failed to export chart as PNG');
+  const width = parseInt(match[1], 10);
+  const height = parseInt(match[2], 10);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return null;
   }
+
+  return { width, height };
 };
 
-export const exportAsJPEG = async (
-  element: HTMLElement,
-  options: ExportOptions = {}
-): Promise<void> => {
-  const {
-    filename = 'chart',
-    scale = 3,
-    quality = 0.95,
-    backgroundColor = '#ffffff'
-  } = options;
+export const resolveExportDimensions = (
+  quality: ExportQuality,
+  size: string | null | undefined
+): ExportDimensions => {
+  const custom = parseCustomSize(size);
+  if (custom) return custom;
 
-  try {
-    const canvas = await html2canvas(element, {
-      scale,
-      backgroundColor,
-      useCORS: true,
-      logging: false,
-      allowTaint: true
-    });
+  const preset = SIZE_PRESETS.find((candidate) => candidate.id === size) ?? SIZE_PRESETS[0];
+  const [ratioWidth, ratioHeight] = preset.ratio;
+  const longEdge = QUALITY_PRESETS[quality].longEdge;
+  const ratio = ratioWidth / ratioHeight;
 
-    const link = document.createElement('a');
-    link.download = `${filename}.jpg`;
-    link.href = canvas.toDataURL('image/jpeg', quality);
-    link.click();
-  } catch (error) {
-    console.error('Error exporting JPEG:', error);
-    throw new Error('Failed to export chart as JPEG');
+  if (ratio >= 1) {
+    return { width: longEdge, height: Math.round(longEdge / ratio) };
   }
+
+  return { width: Math.round(longEdge * ratio), height: longEdge };
 };
 
-export const exportAsPDF = async (
-  element: HTMLElement,
-  options: ExportOptions = {}
-): Promise<void> => {
-  // For PDF export, we can use html2canvas + jsPDF or just html2canvas for now
-  // Simplified implementation - in production, you'd want to use jsPDF
-  await exportAsPNG(element, options);
+const downloadDataUrl = async (dataUrl: string, filename: string) => {
+  const blob = await (await fetch(dataUrl)).blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = `${filename}.png`;
+  link.href = url;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-export const exportChart = async (
-  element: HTMLElement,
-  format: 'png' | 'jpeg' | 'pdf',
-  options: ExportOptions = {}
-): Promise<void> => {
-  const filename = options.filename || `chart-${Date.now()}`;
+const downloadAsPdf = async (
+  dataUrl: string,
+  { width, height }: ExportDimensions,
+  filename: string
+) => {
+  const { jsPDF } = await import('jspdf');
+  const orientation = width >= height ? 'landscape' : 'portrait';
+  const pdf = new jsPDF({
+    orientation,
+    unit: 'px',
+    format: [width, height],
+    hotfixes: ['px_scaling']
+  });
 
-  switch (format) {
-    case 'png':
-      return exportAsPNG(element, { ...options, filename });
-    case 'jpeg':
-      return exportAsJPEG(element, { ...options, filename });
-    case 'pdf':
-      return exportAsPDF(element, { ...options, filename });
-    default:
-      throw new Error(`Unsupported export format: ${format}`);
+  pdf.addImage(dataUrl, 'JPEG', 0, 0, width, height);
+  pdf.save(`${filename}.pdf`);
+};
+
+export const downloadCanvas = async (
+  canvas: HTMLCanvasElement,
+  filename: string,
+  format: ExportFormat
+) => {
+  if (format === 'pdf') {
+    const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    await downloadAsPdf(jpegDataUrl, { width: canvas.width, height: canvas.height }, filename);
+    return;
   }
-};
 
-export const exportChartWithQuality = async (
-  element: HTMLElement,
-  _format: 'png' | 'pdf',
-  quality: 'standard' | 'hd' | '2k' | '4k' | '8k',
-  _size: string,
-  options: Omit<ExportOptions, 'scale' | 'width' | 'height'> = {}
-): Promise<void> => {
-  // Define actual target dimensions for each quality level
-  const qualityPresets = {
-    standard: { width: 1280, height: 720 },    // HD 720p
-    hd: { width: 1920, height: 1080 },         // Full HD 1080p
-    '2k': { width: 2560, height: 1440 },       // 2K QHD
-    '4k': { width: 3840, height: 2160 },       // 4K UHD
-    '8k': { width: 7680, height: 4320 }        // 8K UHD
-  } as const;
-
-  const targetDimensions = qualityPresets[quality];
-  
-  // Calculate scale needed to go from current element size to target size
-  const currentRect = element.getBoundingClientRect();
-  const scaleX = targetDimensions.width / currentRect.width;
-  const scaleY = targetDimensions.height / currentRect.height;
-  
-  // Use the smaller scale to fit proportionally, then round up for sharpness
-  const baseScale = Math.min(scaleX, scaleY);
-  const exportScale = Math.ceil(baseScale);
-  
-  try {
-    // Capture with calculated scale to hit target dimensions
-    const canvas = await html2canvas(element, {
-      scale: exportScale,
-      width: currentRect.width,
-      height: currentRect.height,
-      windowWidth: targetDimensions.width,
-      windowHeight: targetDimensions.height,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-      logging: false,
-      allowTaint: true
-    });
-
-    // Download
-    const link = document.createElement('a');
-    link.download = `${options.filename || 'chart'}.png`;
-    link.href = canvas.toDataURL('image/png', 0.95);
-    link.click();
-  } catch (error) {
-    console.error('Export failed:', error);
-    throw error;
-  }
-};
-
-export const getPresetSizes = () => {
-  return {
-    'social-square': { name: 'Social Media Square', width: 1080, height: 1080, scale: 1 },
-    'social-wide': { name: 'Social Media Wide (HD 1080p)', width: 1920, height: 1080, scale: 1 },
-    'presentation': { name: 'Presentation (Full HD 1080p)', width: 1920, height: 1080, scale: 1 },
-    '2k': { name: '2K QHD', width: 2560, height: 1440, scale: 2 },
-    '4k': { name: '4K UHD', width: 3840, height: 2160, scale: 3 },
-    '8k': { name: '8K UHD', width: 7680, height: 4320, scale: 4 },
-    'a4': { name: 'A4 Print', width: 1240, height: 1754, scale: 1 },
-    'custom': { name: 'Custom Size', width: 1200, height: 800, scale: 1 }
-  };
-};
-
-export const applyExportSize = (element: HTMLElement, width: number, height: number) => {
-  element.style.width = `${width}px`;
-  element.style.height = `${height}px`;
-};
-
-export const resetExportSize = (element: HTMLElement) => {
-  element.style.width = '';
-  element.style.height = '';
+  await downloadDataUrl(canvas.toDataURL('image/png', 1), filename);
 };

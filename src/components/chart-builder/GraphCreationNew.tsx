@@ -2,14 +2,13 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import type { GraphType } from '../../types';
 import { AnimatePresence, motion } from 'framer-motion';
-import SampleDataLibrary from './SampleDataLibrary';
+import SampleDataLibrary, { type SampleData } from './SampleDataLibrary';
 import TemplateGallery from './TemplateGallery';
 import { useUndoRedo } from '../../hooks/useUndoRedo';
 import { COLOR_PALETTES, type ColorPalette } from '../../utils/colorPalettes';
-import { CHART_TEMPLATES } from '../../utils/chartTemplates';
+import { CHART_TEMPLATES, type ChartTemplate } from '../../utils/chartTemplates';
 import ExportDialog from './ExportDialog';
-import { exportChartWithQuality } from '../../utils/exportUtils';
-import { exportChartConfigImage } from '../../utils/chartExport';
+import { exportChartFile } from '../../utils/chartExport';
 import { chartConfigSchema, type ChartConfigInput } from '../../schemas/chartSchemas';
 import { HeroSection } from './sections/HeroSection';
 import { BuilderTabs } from './sections/BuilderTabs';
@@ -29,10 +28,6 @@ ChartJS.register(
   Filler
 );
 
-interface GraphCreationProps {
-  // No navigation props needed - using main header
-}
-
 interface DatasetConfig {
   label: string;
   data: number[];
@@ -51,7 +46,7 @@ interface SaveStatus {
   message: string;
 }
 
-const GraphCreationNew = ({}: GraphCreationProps) => {
+const GraphCreationNew = () => {
   const [config, setConfig] = useState<GraphConfig>({
     title: 'My Chart',
     labels: ['January', 'February', 'March', 'April', 'May'],
@@ -69,7 +64,7 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
   const [saveStatus, setSaveStatus] = useState<SaveStatus | null>(null);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
-  const chartRef = useRef<any>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
   const { setValue, undo, redo, canUndo, canRedo } = useUndoRedo(config);
   const handleSaveChart = useCallback(() => {
     try {
@@ -155,16 +150,16 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
     return parsed.data;
   }, []);
 
-  const handleSelectSampleData = (data: any) => {
+  const handleSelectSampleData = (data: SampleData) => {
     const newConfig: ChartConfigInput = {
       title: data.title,
       labels: data.labels,
-      datasets: data.datasets.map((d: any) => ({
+      datasets: data.datasets.map((d) => ({
         label: d.label,
         data: d.data,
         color: d.color
       })),
-      chartType: data.chartType || data.chartTypes?.[0] || 'bar'
+      chartType: data.chartType || (data.chartTypes?.[0] as GraphType) || 'bar'
     };
 
     const validated = validateExternalConfig(newConfig);
@@ -176,11 +171,11 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
-  const handleSelectTemplate = (template: any) => {
+  const handleSelectTemplate = (template: ChartTemplate) => {
     const newConfig: ChartConfigInput = {
       title: template.name,
       labels: template.config.labels,
-      datasets: template.config.datasets.map((d: any) => ({
+      datasets: template.config.datasets.map((d) => ({
         label: d.label,
         data: d.data.split(',').map((v: string) => parseFloat(v.trim())),
         color: d.color
@@ -203,7 +198,7 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
       title: `${config.title} (Copy)`
     };
     handleConfigChange(newConfig);
-    setSaveStatus({ type: 'success', message: 'Chart duplicated!' });
+    setSaveStatus({ type: 'success', message: 'Chart title duplicated' });
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
@@ -241,6 +236,8 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
       <AnimatePresence>
         {saveStatus && (
           <motion.div
+            role="status"
+            aria-live="polite"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -277,40 +274,24 @@ const GraphCreationNew = ({}: GraphCreationProps) => {
         onClose={() => setIsExportDialogOpen(false)}
         onExport={async (format, quality, size) => {
           try {
-            if (format === 'png') {
-              await exportChartConfigImage(
-                {
-                  title: config.title,
-                  labels: config.labels,
-                  datasets: config.datasets.map((dataset) => ({
-                    label: dataset.label || 'Series',
-                    data: dataset.data,
-                    color: dataset.color
-                  })),
-                  chartType: config.chartType
-                },
+            await exportChartFile(
+              {
+                title: config.title,
+                labels: config.labels,
+                datasets: config.datasets.map((dataset) => ({
+                  label: dataset.label || 'Series',
+                  data: dataset.data,
+                  color: dataset.color
+                })),
+                chartType: config.chartType
+              },
+              {
+                format,
                 quality,
                 size,
-                config.title || 'chart'
-              );
-            } else {
-              if (!chartRef.current) {
-                throw new Error('Chart preview not available for export');
-              }
-
-              const element =
-                (chartRef.current as any).container ||
-                (chartRef.current as any).canvas ||
-                (chartRef.current as HTMLElement);
-
-              if (!element || !(element instanceof HTMLElement)) {
-                throw new Error('Chart element not found');
-              }
-
-              await exportChartWithQuality(element, format, quality, size, {
                 filename: config.title || 'chart'
-              });
-            }
+              }
+            );
 
             setSaveStatus({ type: 'success', message: 'Chart exported successfully!' });
           } catch (error) {

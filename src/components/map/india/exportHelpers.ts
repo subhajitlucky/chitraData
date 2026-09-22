@@ -8,6 +8,29 @@ type ExportOptions = {
   viewBoxHeight: number;
 };
 
+export const scaleNumericString = (value: string, factor: number) => {
+  const match = value.match(/(-?\d*\.?\d+)([a-z%]*)/i);
+  if (!match) {
+    return value;
+  }
+  const [, numberPart, unit] = match;
+  const parsed = parseFloat(numberPart);
+  if (!Number.isFinite(parsed)) {
+    return value;
+  }
+  const scaledNumber = parseFloat((parsed * factor).toFixed(2));
+  return `${scaledNumber}${unit}`;
+};
+
+const toBase64 = (value: string) => {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+};
+
 export const exportSvgAsPng = async ({
   svgElement,
   resolution,
@@ -26,20 +49,6 @@ export const exportSvgAsPng = async ({
   svgClone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
   const exportScale = width / viewBoxWidth;
-
-  const scaleNumericString = (value: string, factor: number) => {
-    const match = value.match(/(-?\\d*\\.?\\d+)([a-z%]*)/i);
-    if (!match) {
-      return value;
-    }
-    const [, numberPart, unit] = match;
-    const parsed = parseFloat(numberPart);
-    if (!Number.isFinite(parsed)) {
-      return value;
-    }
-    const scaledNumber = parseFloat((parsed * factor).toFixed(2));
-    return `${scaledNumber}${unit}`;
-  };
 
   const scaleStyleProperty = (selector: string, property: string, factor: number) => {
     svgClone.querySelectorAll<SVGElement>(selector).forEach((element) => {
@@ -93,7 +102,7 @@ export const exportSvgAsPng = async ({
           link.download = `india-map-${resolution}-${Date.now()}.png`;
           link.href = URL.createObjectURL(blob);
           link.click();
-          URL.revokeObjectURL(link.href);
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
           resolve(label);
           return;
         }
@@ -105,7 +114,7 @@ export const exportSvgAsPng = async ({
       reject(new Error('Export failed'));
     };
 
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    img.src = 'data:image/svg+xml;base64,' + toBase64(svgData);
   });
 };
 

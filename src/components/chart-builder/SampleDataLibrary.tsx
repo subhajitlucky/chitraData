@@ -4,7 +4,7 @@ import { FiDatabase } from 'react-icons/fi';
 import { ChartRenderer } from '../../utils/chartRenderer';
 import type { GraphType } from '../../types';
 
-interface SampleData {
+export interface SampleData {
   id: string;
   title: string;
   description: string;

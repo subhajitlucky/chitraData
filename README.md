@@ -2,7 +2,7 @@
 
 **A free, browser-based chart studio and India map maker. No signup, no server, no upload.**
 
-Build bar, line, area, pie, doughnut, and radar charts, or turn state-level India data into a choropleth map — then export presentation-ready PNG or PDF files. Everything runs client-side, and your data never leaves your browser.
+Build bar, line, area, pie, and doughnut charts, or turn state-level India data into a choropleth map — then export presentation-ready PNG or PDF files. Everything runs client-side, and your data never leaves your browser.
 
 [![Live Demo](https://img.shields.io/badge/live_demo-chitradata.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://chitradata.vercel.app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
@@ -22,12 +22,11 @@ Build bar, line, area, pie, doughnut, and radar charts, or turn state-level Indi
 
 ### Chart studio (`/create`)
 
-- **6 chart types** — bar, line, area, pie, doughnut, radar
+- **5 chart types** — bar, line, area, pie, doughnut
 - **Live preview** — edits render instantly while you type
 - **Templates and samples** — a starter-template gallery plus a ready-made sample data library
-- **Guidance built in** — chart recommendations, "Chart Doctor" hints, and an insights panel that flags readability issues
-- **Styling controls** — color palettes, per-series colors, and light/dark themes
-- **Exports** — PNG and PDF at Standard, HD, 2K, 4K, or 8K quality
+- **Styling controls** — 19 color palettes, per-series colors, colorblind-safe pie slices, and light/dark themes
+- **Exports** — real PNG and PDF output at HD, 2K, 4K, or 8K with 16:9, 1:1, 4:3, A4, and custom sizes
 
 ### India map studio (`/map`)
 
@@ -37,7 +36,7 @@ Build bar, line, area, pie, doughnut, and radar charts, or turn state-level Indi
 
 ### Gallery (`/gallery`)
 
-- Browse, reopen, and delete locally saved charts
+- Browse and delete locally saved charts, and download any saved chart as PNG
 
 ### Experience
 
@@ -65,10 +64,10 @@ Build bar, line, area, pie, doughnut, and radar charts, or turn state-level Indi
 | Chart.js            | Canvas chart rendering         | 4.5     |
 | react-chartjs-2     | React bindings for Chart.js    | 5.3     |
 | D3                  | India map rendering and scales | 7.9     |
-| topojson-client     | Geo data parsing               | 3.1     |
 | Framer Motion       | Animation                      | 12      |
 | Zod                 | Runtime validation             | 4       |
-| html2canvas         | Image export                   | 1.4     |
+| jsPDF               | PDF export (loaded on demand)  | 3       |
+| Vitest              | Unit testing                   | 3       |
 
 ## Getting started
 
@@ -89,12 +88,14 @@ npm run dev
 
 ### Scripts
 
-| Command           | Description                  |
-| ----------------- | ---------------------------- |
-| `npm run dev`     | Start the dev server         |
-| `npm run build`   | Type-check and build to `dist/` |
-| `npm run preview` | Preview the production build |
-| `npm run lint`    | Run ESLint                   |
+| Command             | Description                     |
+| ------------------- | ------------------------------- |
+| `npm run dev`       | Start the dev server            |
+| `npm run build`     | Type-check and build to `dist/` |
+| `npm run preview`   | Preview the production build    |
+| `npm run lint`      | Run ESLint                      |
+| `npm run typecheck` | Run TypeScript checks           |
+| `npm test`          | Run the Vitest unit suite       |
 
 ### Deployment
 
@@ -132,25 +133,29 @@ chitraData/
 
 ## Roadmap
 
-- [ ] Export presets and transparent backgrounds (16:9, 4:3, 1:1, 9:16)
+- [x] Export aspect presets (16:9, 1:1, 4:3, A4) with HD–8K resolution
+- [x] Colorblind-safe pie/doughnut defaults
+- [x] Unit tests wired into CI (typecheck, lint, test, build)
+- [ ] Chart Doctor and insights panel wired into the builder
+- [ ] Reopen a saved chart from the gallery
 - [ ] Brand kits: logo, fonts, palette, watermark toggle
 - [ ] Portable project bundles (`.cdchart`) for offline share and re-import
 - [ ] Story frames and annotations for narrative charts
 - [ ] District-level India maps
 - [ ] Domain data packs (census, budget, economic indicators)
-- [ ] Colorblind-safe defaults and WCAG contrast checks
-- [ ] Unit, visual-regression, and e2e tests wired into CI
+- [ ] Visual-regression and e2e tests
+- [ ] Transparent background and 9:16 export presets
 
 ## Free and open source
 
-ChitraData is MIT licensed and the core app is and will remain free. There is no backend and no tracking — your data stays in your browser.
+ChitraData is MIT licensed and the core app is and will remain free. There is no backend and no account: chart data, map values, and settings never leave your browser. The hosted site uses privacy-friendly Vercel Analytics to count page views only.
 
 ## Contributing
 
 Issues and pull requests are welcome.
 
 1. Fork the repo and create a branch (`feat/your-feature`)
-2. Keep changes typed and scoped; run `npm run lint` and `npm run build` before pushing
+2. Keep changes typed and scoped; run `npm run lint`, `npm test`, and `npm run build` before pushing
 3. Open a PR with a short description of the change and screenshots when relevant
 
 ## License

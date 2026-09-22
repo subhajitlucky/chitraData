@@ -4,7 +4,6 @@ import { BarChart } from './charts/BarChart';
 import { LineChart } from './charts/LineChart';
 import { PieChart } from './charts/PieChart';
 import { AreaChart } from './charts/AreaChart';
-import { ScatterPlot } from './charts/ScatterPlot';
 
 export interface ChartRendererProps {
   data: ChartData;
@@ -34,7 +33,6 @@ export const ChartRenderer = ({ data }: ChartRendererProps) => {
       case 'pie':
       case 'doughnut': return <PieChart data={data} />;
       case 'area': return <AreaChart data={data} />;
-      case 'scatter': return <ScatterPlot data={data} />;
       default: return null;
     }
   };

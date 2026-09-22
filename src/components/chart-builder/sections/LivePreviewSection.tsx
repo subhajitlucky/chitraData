@@ -2,7 +2,6 @@ import { FiDownload } from 'react-icons/fi';
 import { ChartPreview } from '../ChartPreview';
 import type { GraphType } from '../../../types';
 import type { RefObject } from 'react';
-
 interface DatasetConfig {
   label: string;
   data: number[];
@@ -19,12 +18,12 @@ interface GraphConfig {
 interface LivePreviewSectionProps {
   config: GraphConfig;
   onOpenExport: () => void;
-  chartRef: RefObject<any>;
+  chartRef: RefObject<HTMLDivElement>;
 }
 
 export function LivePreviewSection({ config, onOpenExport, chartRef }: LivePreviewSectionProps) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
+    <section className="min-w-0 rounded-3xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Live preview</h2>

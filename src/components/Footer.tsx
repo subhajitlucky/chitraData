@@ -11,7 +11,13 @@ const Footer: React.FC = () => {
           <span className="font-semibold text-blue-600 dark:text-blue-400">Subhajit</span>
         </p>
         <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">
-          © {year} ChitraData. All rights reserved.
+          © {year} ChitraData · MIT licensed ·{' '}
+          <a
+            href="https://github.com/subhajitlucky/chitraData"
+            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            source on GitHub
+          </a>
         </p>
       </div>
     </footer>
