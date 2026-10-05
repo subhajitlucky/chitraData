@@ -139,7 +139,12 @@ export const useIndiaMapRenderer = ({
     currentMapData,
     getStateFillColor,
     // Add implicit dependencies if needed, usually stable or captured
-    paddingPreset, layoutId // Trigger re-render on layout change
+    paddingPreset, layoutId, // Trigger re-render on layout change
+    calculateMetadata,
+    computeMapTopMargin,
+    labelMetaRef,
+    mapDataLookup,
+    titleAnchorOffset
   ]);
 
   return { svgRef, mapLoaded, viewBoxWidth, viewBoxHeight };

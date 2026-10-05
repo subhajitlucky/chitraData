@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import * as d3 from 'd3';
 import { STATE_LABEL_OFFSETS } from '../constants';
 import {
@@ -12,10 +12,11 @@ import type { GeoJSONFeature } from '../types/geoTypes';
 export const useLabelMetadata = () => {
     const labelMetaRef = useRef<LabelMeta[]>([]);
 
-    const calculateMetadata = (
-        features: GeoJSONFeature[],
-        path: d3.GeoPath
-    ): LabelMeta[] => {
+    const calculateMetadata = useCallback(
+        (
+            features: GeoJSONFeature[],
+            path: d3.GeoPath
+        ): LabelMeta[] => {
         const metadata = features.map((feature: GeoJSONFeature) => {
             const stateName = getFeatureStateName(feature);
             const centroidRaw = path.centroid(feature as d3.GeoPermissibleObjects) as [number, number];
@@ -70,7 +71,9 @@ export const useLabelMetadata = () => {
 
         labelMetaRef.current = metadata;
         return metadata;
-    };
+        },
+        []
+    );
 
     return { labelMetaRef, calculateMetadata };
 };
